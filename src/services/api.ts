@@ -18,7 +18,7 @@ import {
 } from '../types';
 import { generateUniqueCode } from '../utils/formatters';
 
-const STORAGE_KEY_PREFIX = 'ikspi_kediri_tabungan_';
+const STORAGE_KEY_PREFIX = 'ikspi_tabungan_live_';
 
 // Initial Mock/Seed Data strictly adhering to the 9 sheets
 const SEED_USERS = [
@@ -29,7 +29,7 @@ const SEED_USERS = [
     salt: 'salt80',
     role: 'ADMIN',
     status: 'AKTIF',
-    namaLengkap: 'Mas Bambang Wijaya, S.Pd',
+    namaLengkap: 'Administrator Cabang',
     jabatan: 'Bendahara Cabang',
     telepon: '081233445566',
     email: 'admin@ikspikediri.org',
@@ -37,75 +37,12 @@ const SEED_USERS = [
     unitRanting: 'Pengurus Cabang Kota Kediri',
     catatan: 'Mewujudkan pengelolaan tabungan atlit yang amanah, transparan, dan berprestasi.',
     fotoUrl: '',
-    createdAt: '2026-01-10T08:00:00.000Z',
-    lastLogin: new Date().toISOString(),
-  },
-  {
-    userId: 'USR-ATLIT-01',
-    username: 'bima.kediri',
-    passwordHash: 'atlit123',
-    salt: 'salt81',
-    role: 'ATLIT',
-    status: 'AKTIF',
-    createdAt: '2026-02-01T09:00:00.000Z',
-    lastLogin: new Date().toISOString(),
-  },
-  {
-    userId: 'USR-ATLIT-02',
-    username: 'dewi.pesantren',
-    passwordHash: 'atlit123',
-    salt: 'salt82',
-    role: 'ATLIT',
-    status: 'AKTIF',
-    createdAt: '2026-02-15T10:00:00.000Z',
+    createdAt: '2026-01-01T08:00:00.000Z',
     lastLogin: new Date().toISOString(),
   },
 ];
 
-const SEED_ATHLETES: AthleteProfile[] = [
-  {
-    id: 'ATL-001',
-    userId: 'USR-ATLIT-01',
-    nomorInduk: '128 / 0089',
-    angkatan: '128',
-    niw: '0089',
-    nik: '3571011205040001',
-    namaLengkap: 'Bima Satria Yudha',
-    tempatLahir: 'Kediri',
-    tanggalLahir: '2004-05-12',
-    alamat: 'Jl. Dhoho No. 45, Mojoroto, Kota Kediri',
-    nomorWhatsApp: '081234567890',
-    unitRanting: 'Ranting Mojoroto',
-    status: 'AKTIF',
-    createdAt: '2026-02-01T09:00:00.000Z',
-    updatedAt: '2026-02-01T09:00:00.000Z',
-    saldoSaatIni: 850000,
-    totalSetoran: 1100000,
-    totalPenarikan: 250000,
-    catatan: 'Atlet Tanding Putra Kelas D - Juara Kejurda Jatim',
-  },
-  {
-    id: 'ATL-002',
-    userId: 'USR-ATLIT-02',
-    nomorInduk: '130 / 0104',
-    angkatan: '130',
-    niw: '0104',
-    nik: '3571022009050002',
-    namaLengkap: 'Dewi Sekartaji',
-    tempatLahir: 'Kediri',
-    tanggalLahir: '2005-09-20',
-    alamat: 'Jl. Pesantren Asri Blok B2, Kota Kediri',
-    nomorWhatsApp: '085799887766',
-    unitRanting: 'Ranting Pesantren',
-    status: 'AKTIF',
-    createdAt: '2026-02-15T10:00:00.000Z',
-    updatedAt: '2026-02-15T10:00:00.000Z',
-    saldoSaatIni: 450000,
-    totalSetoran: 450000,
-    totalPenarikan: 0,
-    catatan: 'Atlet Seni Tunggal Putri IPSI',
-  },
-];
+const SEED_ATHLETES: AthleteProfile[] = [];
 
 const SEED_SETTINGS: SystemSettings = {
   namaAplikasi: 'TABUNGAN ATLIT IKS PI KOTA KEDIRI',
@@ -172,206 +109,65 @@ const SEED_NOTICES: AppNotice[] = [
   },
 ];
 
-const SEED_PENDING_REGISTRATIONS: PendingRegistration[] = [
-  {
-    id: 'REG-20261029-01',
-    username: 'satrio.ikspi',
-    namaLengkap: 'Satrio Wicaksono',
-    nomorInduk: '135 / 0211',
-    angkatan: '135',
-    niw: '0211',
-    nik: '3571031403060003',
-    tempatLahir: 'Kediri',
-    tanggalLahir: '2006-03-14',
-    alamat: 'Kel. Bandar Kidul, Kec. Mojoroto, Kediri',
-    nomorWhatsApp: '082133445588',
-    unitRanting: 'Ranting Mojoroto',
-    tanggalDaftar: new Date(Date.now() - 3600000 * 5).toISOString(),
-    status: 'MENUNGGU_PERSETUJUAN',
-  },
-];
-
-const SEED_DEPOSITS: DepositTransaction[] = [
-  {
-    id: 'DEP-001',
-    nomorTransaksi: 'TRX-DEP-20261020-001',
-    athleteId: 'ATL-001',
-    namaLengkap: 'Bima Satria Yudha',
-    nomorInduk: 'IKS-KDR-2024-0089',
-    unitRanting: 'Ranting Mojoroto',
-    nominal: 500000,
-    metodePembayaran: 'TRANSFER',
-    namaBankPengirim: 'BCA',
-    nomorRekeningPengirim: '1400293811',
-    buktiTransferUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600',
-    keterangan: 'Setoran Awal Tabungan Atlit Kejurcab',
-    status: 'DISETUJUI',
-    catatanAdmin: 'Bukti transfer valid telah masuk ke rekening kas IKS PI Kediri',
-    disetujuiOleh: 'admin',
-    tanggalPengajuan: '2026-10-20T10:00:00.000Z',
-    tanggalPersetujuan: '2026-10-20T11:15:00.000Z',
-  },
-  {
-    id: 'DEP-002',
-    nomorTransaksi: 'TRX-DEP-20261025-002',
-    athleteId: 'ATL-001',
-    namaLengkap: 'Bima Satria Yudha',
-    nomorInduk: 'IKS-KDR-2024-0089',
-    unitRanting: 'Ranting Mojoroto',
-    nominal: 600000,
-    metodePembayaran: 'TUNAI',
-    keterangan: 'Setoran uang saku tanding',
-    status: 'DISETUJUI',
-    catatanAdmin: 'Diterima tunai oleh Bendahara Cabang',
-    disetujuiOleh: 'admin',
-    tanggalPengajuan: '2026-10-25T14:00:00.000Z',
-    tanggalPersetujuan: '2026-10-25T14:30:00.000Z',
-  },
-  {
-    id: 'DEP-003',
-    nomorTransaksi: 'TRX-DEP-20261028-003',
-    athleteId: 'ATL-002',
-    namaLengkap: 'Dewi Sekartaji',
-    nomorInduk: 'IKS-KDR-2024-0104',
-    unitRanting: 'Ranting Pesantren',
-    nominal: 450000,
-    metodePembayaran: 'TRANSFER',
-    namaBankPengirim: 'BRI',
-    nomorRekeningPengirim: '003201992019',
-    buktiTransferUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600',
-    keterangan: 'Tabungan persiapan Kejurda Jatim',
-    status: 'DISETUJUI',
-    catatanAdmin: 'Dana masuk terverifikasi',
-    disetujuiOleh: 'admin',
-    tanggalPengajuan: '2026-10-28T09:30:00.000Z',
-    tanggalPersetujuan: '2026-10-28T10:00:00.000Z',
-  },
-  {
-    id: 'DEP-004',
-    nomorTransaksi: 'TRX-DEP-20261029-004',
-    athleteId: 'ATL-001',
-    namaLengkap: 'Bima Satria Yudha',
-    nomorInduk: 'IKS-KDR-2024-0089',
-    unitRanting: 'Ranting Mojoroto',
-    nominal: 200000,
-    metodePembayaran: 'TRANSFER',
-    namaBankPengirim: 'BCA',
-    nomorRekeningPengirim: '1400293811',
-    buktiTransferUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600',
-    keterangan: 'Tambahan tabungan seragam tanding',
-    status: 'MENUNGGU_PERSETUJUAN',
-    tanggalPengajuan: new Date().toISOString(),
-  },
-];
-
-const SEED_WITHDRAWALS: WithdrawalTransaction[] = [
-  {
-    id: 'WD-001',
-    nomorTransaksi: 'TRX-WD-20261027-001',
-    athleteId: 'ATL-001',
-    namaLengkap: 'Bima Satria Yudha',
-    nomorInduk: 'IKS-KDR-2024-0089',
-    unitRanting: 'Ranting Mojoroto',
-    nominal: 250000,
-    keperluan: 'Beli sepatu latihan silat & suplemen',
-    metodePenyaluran: 'TRANSFER',
-    namaBankPenerima: 'BCA',
-    nomorRekeningPenerima: '1400293811',
-    namaPenerimaRekening: 'Bima Satria Yudha',
-    status: 'DISETUJUI',
-    catatanAdmin: 'Telah ditransfer oleh bendahara',
-    disetujuiOleh: 'admin',
-    tanggalPengajuan: '2026-10-27T08:00:00.000Z',
-    tanggalPersetujuan: '2026-10-27T09:20:00.000Z',
-    saldoSebelum: 1100000,
-    saldoSetelah: 850000,
-  },
-];
-
-const SEED_MUTATIONS: MutationRecord[] = [
-  {
-    id: 'MUT-001',
-    nomorReferensi: 'TRX-DEP-20261020-001',
-    athleteId: 'ATL-001',
-    namaLengkap: 'Bima Satria Yudha',
-    jenisMutasi: 'KREDIT',
-    keterangan: 'Setoran Awal Tabungan Atlit Kejurcab',
-    nominal: 500000,
-    saldoSebelum: 0,
-    saldoSesudah: 500000,
-    waktu: '2026-10-20T11:15:00.000Z',
-    petugas: 'admin',
-  },
-  {
-    id: 'MUT-002',
-    nomorReferensi: 'TRX-DEP-20261025-002',
-    athleteId: 'ATL-001',
-    namaLengkap: 'Bima Satria Yudha',
-    jenisMutasi: 'KREDIT',
-    keterangan: 'Setoran uang saku tanding (Tunai)',
-    nominal: 600000,
-    saldoSebelum: 500000,
-    saldoSesudah: 1100000,
-    waktu: '2026-10-25T14:30:00.000Z',
-    petugas: 'admin',
-  },
-  {
-    id: 'MUT-003',
-    nomorReferensi: 'TRX-WD-20261027-001',
-    athleteId: 'ATL-001',
-    namaLengkap: 'Bima Satria Yudha',
-    jenisMutasi: 'DEBIT',
-    keterangan: 'Penarikan: Beli sepatu latihan silat & suplemen',
-    nominal: 250000,
-    saldoSebelum: 1100000,
-    saldoSesudah: 850000,
-    waktu: '2026-10-27T09:20:00.000Z',
-    petugas: 'admin',
-  },
-  {
-    id: 'MUT-004',
-    nomorReferensi: 'TRX-DEP-20261028-003',
-    athleteId: 'ATL-002',
-    namaLengkap: 'Dewi Sekartaji',
-    jenisMutasi: 'KREDIT',
-    keterangan: 'Tabungan persiapan Kejurda Jatim',
-    nominal: 450000,
-    saldoSebelum: 0,
-    saldoSesudah: 450000,
-    waktu: '2026-10-28T10:00:00.000Z',
-    petugas: 'admin',
-  },
-];
-
+const SEED_PENDING_REGISTRATIONS: PendingRegistration[] = [];
+const SEED_DEPOSITS: DepositTransaction[] = [];
+const SEED_WITHDRAWALS: WithdrawalTransaction[] = [];
+const SEED_MUTATIONS: MutationRecord[] = [];
 const SEED_LOGS: ActivityLog[] = [
   {
-    id: 'LOG-001',
-    waktu: '2026-10-20T11:15:00.000Z',
+    id: 'LOG-INIT',
+    waktu: new Date().toISOString(),
     actor: 'admin',
     role: 'ADMIN',
-    action: 'APPROVE_SETORAN',
-    kategori: 'SETORAN',
-    detail: 'Menyetujui setoran TRX-DEP-20261020-001 senilai Rp 500.000 (Bima Satria Yudha)',
-  },
-  {
-    id: 'LOG-002',
-    waktu: '2026-10-25T14:30:00.000Z',
-    actor: 'admin',
-    role: 'ADMIN',
-    action: 'APPROVE_SETORAN',
-    kategori: 'SETORAN',
-    detail: 'Menyetujui setoran TRX-DEP-20261025-002 senilai Rp 600.000 (Bima Satria Yudha)',
-  },
-  {
-    id: 'LOG-003',
-    waktu: '2026-10-27T09:20:00.000Z',
-    actor: 'admin',
-    role: 'ADMIN',
-    action: 'APPROVE_PENARIKAN',
-    kategori: 'PENARIKAN',
-    detail: 'Menyetujui penarikan TRX-WD-20261027-001 senilai Rp 250.000 (Bima Satria Yudha)',
+    action: 'SISTEM_INIT',
+    kategori: 'SISTEM',
+    detail: 'Inisialisasi sistem tabungan atlit baru - data bersih dan siap digunakan.',
   },
 ];
+
+// One-time automatic cleanup of old mock/demo data
+if (typeof window !== 'undefined') {
+  try {
+    const CLEAN_KEY = 'ikspi_clean_v4_ready';
+    if (!localStorage.getItem(CLEAN_KEY)) {
+      const keysToClear = [
+        'ikspi_kediri_tabungan_users',
+        'ikspi_kediri_tabungan_athletes',
+        'ikspi_kediri_tabungan_pendings',
+        'ikspi_kediri_tabungan_deposits',
+        'ikspi_kediri_tabungan_withdrawals',
+        'ikspi_kediri_tabungan_mutations',
+        'ikspi_kediri_tabungan_logs',
+        'ikspi_kediri_tabungan_notices',
+        'ikspi_tabungan_live_users',
+        'ikspi_tabungan_live_athletes',
+        'ikspi_tabungan_live_pendings',
+        'ikspi_tabungan_live_deposits',
+        'ikspi_tabungan_live_withdrawals',
+        'ikspi_tabungan_live_mutations',
+        'ikspi_tabungan_live_logs',
+        'ikspi_dismissed_notices',
+      ];
+      keysToClear.forEach(k => localStorage.removeItem(k));
+
+      // If user session was a mock athlete, clear it so they log in fresh as admin
+      const sessionRaw = localStorage.getItem('ikspi_kediri_session');
+      if (sessionRaw) {
+        try {
+          const s = JSON.parse(sessionRaw);
+          if (s.role !== 'ADMIN') {
+            localStorage.removeItem('ikspi_kediri_session');
+          }
+        } catch {
+          localStorage.removeItem('ikspi_kediri_session');
+        }
+      }
+      localStorage.setItem(CLEAN_KEY, 'true');
+    }
+  } catch (e) {
+    console.error('Storage cleanup error:', e);
+  }
+}
 
 // Helper to get or init localStorage data
 function getStore<T>(key: string, defaultVal: T): T {
@@ -646,7 +442,7 @@ export const api = {
     if (!matchedUser) {
       return {
         success: false,
-        message: 'Username atau Angkatan & NIW tidak ditemukan. Pastikan format benar (contoh: bima.kediri atau 128/0089).',
+        message: 'Username atau Angkatan & NIW tidak ditemukan. Pastikan format benar (contoh: username atau 128/0089).',
       };
     }
 
@@ -809,14 +605,13 @@ export const api = {
       const totalSaldoBebasLikuid = Math.max(0, totalSaldo - totalEndapanTerkunci);
       const persentaseKepatuhanEndapan = totalTargetEndapan > 0 ? Math.round((totalEndapanTerkunci / totalTargetEndapan) * 100) : 0;
 
-      // Real Monthly Grouping or dynamic history
+      // Clean monthly grouping: dynamic based on real data
       const chartDataBulanan = [
-        { bulan: 'Okt 25', setoran: 1400000, penarikan: 350000, saldo: 1050000 },
-        { bulan: 'Nov 25', setoran: 2100000, penarikan: 400000, saldo: 2750000 },
-        { bulan: 'Des 25', setoran: 2850000, penarikan: 650000, saldo: 4950000 },
-        { bulan: 'Jan 26', setoran: 3400000, penarikan: 800000, saldo: 7550000 },
-        { bulan: 'Feb 26', setoran: 3100000, penarikan: 550000, saldo: 10100000 },
-        { bulan: 'Mar 26', setoran: totalMasuk > 0 ? totalMasuk : 3800000, penarikan: totalKeluar > 0 ? totalKeluar : 700000, saldo: totalSaldo > 0 ? totalSaldo : 13200000 },
+        { bulan: 'Nov', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Des', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Jan', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Feb', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Bulan Ini', setoran: totalMasuk, penarikan: totalKeluar, saldo: totalSaldo },
       ];
 
       const allRecent: any[] = [...deposits, ...withdrawals].sort(
@@ -858,14 +653,13 @@ export const api = {
       const athTotalSetoran = myAthlete?.totalSetoran || athBalance;
       const athTotalPenarikan = myAthlete?.totalPenarikan || 0;
 
-      // Realistic progressive trend of athlete savings growth
+      // Clean progressive trend of athlete savings growth starting from zero
       const chartDataTren = [
-        { bulan: 'Okt 25', setoran: Math.round(athTotalSetoran * 0.15), penarikan: 0, saldo: Math.round(athTotalSetoran * 0.15) },
-        { bulan: 'Nov 25', setoran: Math.round(athTotalSetoran * 0.20), penarikan: 0, saldo: Math.round(athTotalSetoran * 0.35) },
-        { bulan: 'Des 25', setoran: Math.round(athTotalSetoran * 0.25), penarikan: Math.round(athTotalPenarikan * 0.3), saldo: Math.max(0, Math.round(athTotalSetoran * 0.60) - Math.round(athTotalPenarikan * 0.3)) },
-        { bulan: 'Jan 26', setoran: Math.round(athTotalSetoran * 0.20), penarikan: 0, saldo: Math.max(0, Math.round(athTotalSetoran * 0.80) - Math.round(athTotalPenarikan * 0.3)) },
-        { bulan: 'Feb 26', setoran: Math.round(athTotalSetoran * 0.10), penarikan: Math.round(athTotalPenarikan * 0.4), saldo: Math.max(0, Math.round(athTotalSetoran * 0.90) - Math.round(athTotalPenarikan * 0.7)) },
-        { bulan: 'Mar 26', setoran: Math.round(athTotalSetoran * 0.10), penarikan: Math.round(athTotalPenarikan * 0.3), saldo: athBalance },
+        { bulan: 'Nov', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Des', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Jan', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Feb', setoran: 0, penarikan: 0, saldo: 0 },
+        { bulan: 'Bulan Ini', setoran: athTotalSetoran, penarikan: athTotalPenarikan, saldo: athBalance },
       ];
 
       const saldoEndapanTerkunci = Math.min(athBalance, saldoEndapanWajib);
@@ -2144,6 +1938,59 @@ export const api = {
       success: true,
       message: remote?.message || 'Profil Administrator berhasil diperbarui!',
       profile: updatedProfile,
+    };
+  },
+
+  // 18. RESET DATABASE TO CLEAN FACTORY STATE
+  async resetToCleanState(): Promise<{ success: boolean; message: string }> {
+    const defaultAdmin = [
+      {
+        userId: 'USR-ADMIN-01',
+        username: 'admin',
+        passwordHash: 'admin123',
+        salt: 'salt80',
+        role: 'ADMIN',
+        status: 'AKTIF',
+        namaLengkap: 'Administrator Cabang',
+        jabatan: 'Bendahara Cabang',
+        telepon: '081233445566',
+        email: 'admin@ikspikediri.org',
+        alamat: 'Padepokan IKS PI Kera Sakti Cabang Kota Kediri, Jawa Timur',
+        unitRanting: 'Pengurus Cabang Kota Kediri',
+        catatan: 'Mewujudkan pengelolaan tabungan atlit yang amanah, transparan, dan berprestasi.',
+        fotoUrl: '',
+        createdAt: '2026-01-01T08:00:00.000Z',
+        lastLogin: new Date().toISOString(),
+      },
+    ];
+
+    setStore('users', defaultAdmin);
+    setStore('athletes', []);
+    setStore('pendings', []);
+    setStore('deposits', []);
+    setStore('withdrawals', []);
+    setStore('mutations', []);
+    setStore('logs', [
+      {
+        id: 'LOG-' + Date.now(),
+        waktu: new Date().toISOString(),
+        actor: 'admin',
+        role: 'ADMIN',
+        action: 'RESET_DATABASE',
+        kategori: 'SISTEM',
+        detail: 'Inisialisasi sistem tabungan bersih - seluruh data atlit dan transaksi dummy dikosongkan.',
+      },
+    ]);
+    setStore('notices', SEED_NOTICES);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_notices_updated'));
+      window.dispatchEvent(new Event('ikspi_settings_updated'));
+    }
+
+    return {
+      success: true,
+      message: 'Seluruh data atlit dan transaksi berhasil dikosongkan! Aplikasi kini seperti aplikasi baru dengan akun admin default (admin/admin123).',
     };
   },
 };

@@ -92,7 +92,7 @@ export const LoginPage: React.FC = () => {
                   autoComplete="username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Contoh: admin, bima.kediri, atau 128/0089"
+                  placeholder="Contoh: admin, username, atau 128/0089"
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-700/80 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition font-mono"
                 />
               </div>

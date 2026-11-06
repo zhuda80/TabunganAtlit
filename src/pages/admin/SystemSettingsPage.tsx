@@ -82,6 +82,10 @@ export const SystemSettingsPage: React.FC = () => {
   const [resetNewPass, setResetNewPass] = useState('');
   const [resettingPass, setResettingPass] = useState(false);
 
+  // Clean / Factory Reset state
+  const [cleaningData, setCleaningData] = useState(false);
+  const [showCleanConfirmModal, setShowCleanConfirmModal] = useState(false);
+
   // GAS Connection & Sync state
   const [testingConnection, setTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string; latency?: number } | null>(null);
@@ -94,6 +98,26 @@ export const SystemSettingsPage: React.FC = () => {
       fetchNotices();
     }
   }, [user]);
+
+  const handleExecuteCleanDatabase = async () => {
+    setCleaningData(true);
+    try {
+      const res = await api.resetToCleanState();
+      if (res.success) {
+        setToast({ type: 'success', message: res.message });
+        setShowCleanConfirmModal(false);
+        await fetchCredentials();
+        await fetchNotices();
+        await fetchSettings();
+      } else {
+        setToast({ type: 'error', message: res.message });
+      }
+    } catch (err: any) {
+      setToast({ type: 'error', message: err?.message || 'Gagal mengosongkan data.' });
+    } finally {
+      setCleaningData(false);
+    }
+  };
 
   const fetchNotices = async () => {
     setLoadingNotices(true);
@@ -961,8 +985,8 @@ export const SystemSettingsPage: React.FC = () => {
             </form>
           </div>
 
-          {/* Change Password Admin */}
-          <div>
+          {/* Change Password Admin & Reset Data */}
+          <div className="space-y-6">
             <form onSubmit={handleChangePassword} className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-4">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Key className="w-4 h-4 text-amber-400" />
@@ -1027,6 +1051,37 @@ export const SystemSettingsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+
+            {/* Reset Database to Clean / Ready-for-Publish State */}
+            <div className="bg-gradient-to-br from-slate-900 via-rose-950/20 to-slate-900 border border-rose-900/40 rounded-3xl p-6 shadow-xl space-y-4">
+              <div className="flex items-center gap-2 text-rose-400">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <h3 className="text-sm font-bold uppercase tracking-wider">Kondisi Bersih (Reset Basis Data)</h3>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Kosongkan seluruh data atlit uji coba, pendaftaran pending, setoran, penarikan, dan mutasi kas. Hanya menyisakan akun admin default (<span className="font-mono text-amber-400">admin</span> / <span className="font-mono text-amber-400">admin123</span>) agar aplikasi bersih dan siap digunakan live.
+              </p>
+              <div className="p-3 rounded-2xl bg-slate-950/80 border border-rose-900/30 text-[11px] text-slate-400 space-y-1">
+                <div className="flex items-center gap-1.5 text-rose-400 font-semibold">
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Kondisi Setelah Dikosongkan:</span>
+                </div>
+                <ul className="list-disc list-inside space-y-0.5 text-slate-300">
+                  <li>Total Atlit Terdaftar: 0</li>
+                  <li>Total Saldo Kas Atlit: Rp 0</li>
+                  <li>Riwayat Transaksi: Kosong (0 transaksi)</li>
+                  <li>Login Admin: <strong className="text-white">admin</strong> / <strong className="text-white">admin123</strong></li>
+                </ul>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCleanConfirmModal(true)}
+                className="w-full py-2.5 px-4 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 hover:text-rose-300 border border-rose-500/40 text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-sm"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Kosongkan Seluruh Data (Mulai Baru)</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2146,6 +2201,62 @@ export const SystemSettingsPage: React.FC = () => {
                 className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold cursor-pointer"
               >
                 Tutup Pratinjau
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Kosongkan Basis Data */}
+      {showCleanConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="w-full max-w-md bg-slate-900 border border-rose-500/50 rounded-3xl p-6 shadow-2xl space-y-5">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                <AlertTriangle className="w-6 h-6 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Konfirmasi Kosongkan Data?</h3>
+                <p className="text-xs text-rose-300/80">Tindakan ini akan mengosongkan seluruh data atlit & transaksi</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-slate-300 space-y-2 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+              <p>Apakah Anda yakin ingin mengosongkan seluruh basis data aplikasi?</p>
+              <ul className="list-disc list-inside text-slate-400 space-y-1 text-[11px]">
+                <li>Semua akun atlit demo/uji coba akan dihapus.</li>
+                <li>Semua pengajuan setoran & penarikan akan dihapus.</li>
+                <li>Riwayat transaksi & mutasi kas akan bersih (0 transaksi).</li>
+                <li>Hanya akun admin default (<span className="text-amber-400 font-mono font-bold">admin / admin123</span>) yang tetap tersimpan.</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowCleanConfirmModal(false)}
+                disabled={cleaningData}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteCleanDatabase}
+                disabled={cleaningData}
+                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition cursor-pointer flex items-center gap-2 shadow-lg shadow-rose-600/30"
+              >
+                {cleaningData ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Mengosongkan Data...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Ya, Kosongkan Sekarang</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
