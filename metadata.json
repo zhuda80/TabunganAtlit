@@ -1,0 +1,6 @@
+{
+  "name": "Tabungan Atlit IKS PI Kota Kediri",
+  "description": "Sistem Manajemen Tabungan Digital Atlet dan Anggota IKS PI Kera Sakti Cabang Kota Kediri",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
