@@ -42,6 +42,12 @@ import {
   Trophy,
   Info,
   Layers,
+  GitBranch,
+  Terminal,
+  Globe,
+  Rocket,
+  Download,
+  ArrowRight,
 } from 'lucide-react';
 
 export const SystemSettingsPage: React.FC = () => {
@@ -49,6 +55,7 @@ export const SystemSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Password change state
@@ -390,6 +397,13 @@ export const SystemSettingsPage: React.FC = () => {
     setTimeout(() => setCopiedCode(false), 2500);
   };
 
+  const handleCopySnippet = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedSnippet(id);
+    setToast({ type: 'success', message: 'Teks berhasil disalin ke clipboard!' });
+    setTimeout(() => setCopiedSnippet(null), 2500);
+  };
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
@@ -559,8 +573,8 @@ export const SystemSettingsPage: React.FC = () => {
               : 'text-slate-400 hover:text-white bg-slate-900'
           }`}
         >
-          <Database className="w-4 h-4" />
-          <span>Panduan Lengkap Setup (10 Langkah)</span>
+          <Rocket className="w-4 h-4" />
+          <span>Panduan Setup (AI Studio ➔ GitHub ➔ Vercel)</span>
         </button>
       </div>
 
@@ -1672,124 +1686,440 @@ export const SystemSettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* TAB 3: COMPLETE DEPLOYMENT GUIDE */}
+      {/* TAB 3: COMPLETE DEPLOYMENT GUIDE (AI STUDIO -> GITHUB -> VERCEL) */}
       {activeTab === 'DEPLOYMENT_GUIDE' && (
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
-          <div className="border-b border-slate-800 pb-4">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2 font-serif">
-              <Database className="w-5 h-5 text-amber-400" />
-              <span>Panduan Lengkap Setup Google Sheets, Drive, & Deployment Vercel</span>
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-8">
+          {/* Header */}
+          <div className="border-b border-slate-800 pb-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mb-2">
+              <Rocket className="w-3.5 h-3.5" />
+              <span>PANDUAN LENGKAP DISTRIBUSI & DEPLOYMENT</span>
+            </div>
+            <h3 className="text-xl md:text-2xl font-bold text-white font-serif">
+              Panduan Step-by-Step: Google AI Studio ➔ GitHub ➔ Vercel
             </h3>
             <p className="text-xs text-slate-400 mt-1">
-              Ikuti 10 langkah berikut untuk mengaktifkan sistem secara live dan aman 100%.
+              Ikuti seluruh panduan terstruktur ini untuk mempublikasikan aplikasi Tabungan Atlit IKS PI Kera Sakti Cabang Kota Kediri secara live di internet dengan domain gratis SSL 24 jam nonstop.
             </p>
+
+            {/* Architecture flow pills */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4 pt-4 border-t border-slate-800/80">
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs shrink-0">
+                  1
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold text-white">Google AI Studio</div>
+                  <div className="text-[10px] text-slate-400">Unduh / Ekspor Kode</div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold text-xs shrink-0">
+                  2
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold text-white">GitHub Repository</div>
+                  <div className="text-[10px] text-slate-400">Pusat Source Code & CI/CD</div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
+                  3
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold text-white">Vercel Hosting</div>
+                  <div className="text-[10px] text-slate-400">Live Website 24/7 SSL Gratis</div>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-xs shrink-0">
+                  4
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold text-white">Google Sheets & Drive</div>
+                  <div className="text-[10px] text-slate-400">Database & Bukti Transfer</div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-6 text-xs text-slate-300 leading-relaxed">
-            {/* Step 1 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 1: MEMBUAT GOOGLE SPREADSHEET</span>
-              <p>Buka <a href="https://sheets.new" target="_blank" rel="noreferrer" className="text-amber-400 underline">sheets.new</a> dan buat spreadsheet baru dengan nama: <strong>DATABASE TABUNGAN ATLIT IKS PI KOTA KEDIRI</strong>.</p>
+          {/* FASE 1: GOOGLE SPREADSHEET & APPS SCRIPT SETUP */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-400 border-b border-amber-500/20 pb-2 font-mono">
+              <Database className="w-4 h-4 text-amber-400" />
+              <span>FASE 1: MENYIAPKAN DATABASE GOOGLE SPREADSHEET & APPS SCRIPT</span>
             </div>
 
-            {/* Step 2 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 2: MEMBUKA APPS SCRIPT</span>
-              <p>Di Google Sheets, klik menu <strong>Ekstensi (Extensions)</strong> &gt; <strong>Apps Script</strong>. Beri nama proyek: <code>Backend_Tabungan_IKSPI</code>.</p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 3: MEMASANG KODE.GS</span>
-              <p>Hapus seluruh kode bawaan di tab <code>Code.gs</code>, kemudian salin dan tempelkan seluruh kode dari tab <strong>Kode Backend (Code.gs)</strong> di atas. Klik ikon disket untuk <strong>Simpan (Save)</strong>.</p>
-            </div>
-
-            {/* Step 4 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 4: MENJALANKAN INISIALISASI DATABASE OTOMATIS</span>
-              <p>Di toolbar Apps Script, pilih fungsi <code>initDatabase</code> lalu klik <strong>Jalankan (Run)</strong>. Berikan izin akses (Review Permissions &gt; Advanced &gt; Go to Backend_Tabungan_IKSPI). Fungsi ini akan otomatis membuat 9 sheet lengkap dengan header dan styling warna navy!</p>
-              <ul className="list-disc pl-5 text-slate-400 space-y-0.5 mt-1">
-                <li>1. USERS</li>
-                <li>2. DATA_ATLIT</li>
-                <li>3. PENDAFTARAN</li>
-                <li>4. SETORAN</li>
-                <li>5. PENARIKAN</li>
-                <li>6. SALDO</li>
-                <li>7. MUTASI</li>
-                <li>8. LOG_AKTIVITAS</li>
-                <li>9. PENGATURAN</li>
-              </ul>
-            </div>
-
-            {/* Step 5 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 5: MENYIAPKAN GOOGLE DRIVE UNTUK BUKTI TRANSFER</span>
-              <p>Fungsi inisialisasi di Langkah 4 secara otomatis telah membuat folder bernama <code>BUKTI_TRANSFER_TABUNGAN_IKSPI_KEDIRI</code> di Google Drive Anda untuk menyimpan seluruh bukti upload transfer atlet.</p>
-            </div>
-
-            {/* Step 6 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 6: DEPLOY SEBAGAI WEB APP</span>
-              <p>Klik tombol biru <strong>Deploy</strong> &gt; <strong>New deployment</strong>:</p>
-              <ul className="list-disc pl-5 text-slate-400 space-y-0.5 mt-1">
-                <li>Pilih tipe: <strong>Web app</strong></li>
-                <li>Execute as: <strong>Me (email Anda)</strong></li>
-                <li>Who has access: <strong>Anyone</strong> (Wajib agar dapat diakses oleh frontend)</li>
-                <li>Klik <strong>Deploy</strong>, lalu salin <strong>Web App URL</strong> yang dihasilkan.</li>
-              </ul>
-            </div>
-
-            {/* Step 7 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 7: ATUR ENVIRONMENT VARIABLE DI VERCEL</span>
-              <p>Saat deploy repository frontend ke Vercel, tambahkan Environment Variable:</p>
-              <code className="block p-2 rounded bg-slate-900 border border-slate-800 text-amber-400 font-mono">
-                VITE_API_URL = https://script.google.com/macros/s/AKfycb.../exec
-              </code>
-            </div>
-
-            {/* Step 8 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 8: MEMBUAT AKUN ADMIN PERTAMA DENGAN AMAN</span>
-              <p>Fungsi <code>initDatabase</code> telah menginisialisasi akun admin bawaan:</p>
-              <p className="font-mono text-emerald-400 font-bold">Username: admin • Password: admin123</p>
-              <p className="text-amber-400/90 font-medium">Akun ini memiliki hak akses penuh untuk mengelola pendaftaran atlit, verifikasi setoran, dan penarikan kas.</p>
-            </div>
-
-            {/* Step 9 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 9: MENGUJI LOGIN ADMIN DAN ATLIT</span>
-              <p>Uji login dengan akun admin dan lakukan registrasi atlit baru melalui halaman pendaftaran. Buka tab <strong>Verifikasi Registrasi</strong> untuk menyetujui akun atlet baru.</p>
-            </div>
-
-            {/* Step 10 */}
-            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
-              <span className="font-mono text-amber-400 font-bold">LANGKAH 10: MENGUJI SETORAN, PENARIKAN & APPROVAL</span>
-              <p>Masuk sebagai atlet, lakukan setoran dengan bukti upload, kemudian masuk kembali sebagai admin untuk menyetujui. Cek bahwa saldo bertambah tepat satu kali dan mutasi tercatat sempurna di sheet MUTASI dan SALDO!</p>
-            </div>
-
-            {/* Troubleshooting SyntaxError */}
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
-              <span className="font-mono text-amber-400 font-bold flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span>CARA MENGATASI: SyntaxError: Unexpected end of JSON input</span>
-              </span>
-              <p className="text-slate-300">
-                Peringatan ini muncul jika frontend menghubungi server Apps Script tetapi server memberikan balasan kosong atau halaman login Google. Penyebab dan solusinya:
-              </p>
-              <div className="space-y-1.5 pl-3 border-l-2 border-amber-500/40 mt-2 text-slate-300">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 1: BUAT SPREADSHEET BARU</span>
                 <p>
-                  <strong>Penyebab 1 (Paling Sering):</strong> Opsi <em>Who has access</em> masih <em>"Only myself"</em> saat Deploy. Google otomatis menolak akses dan meminta login akun Google.
+                  Buka <a href="https://sheets.new" target="_blank" rel="noreferrer" className="text-amber-400 underline inline-flex items-center gap-1 font-semibold">sheets.new <ExternalLink className="w-3 h-3" /></a> di browser Google Anda.
                 </p>
-                <p className="text-amber-300">
-                  ➔ <strong>Solusi:</strong> Di Apps Script, klik <strong>Deploy</strong> &gt; <strong>Manage deployments</strong> &gt; klik ikon <strong>Pensil (Edit)</strong> &gt; ubah <em>Version</em> ke <strong>New version</strong> &gt; ubah <em>Who has access</em> ke <strong>Anyone</strong> &gt; klik <strong>Deploy</strong>.
+                <p className="text-slate-400 text-[11px]">
+                  Beri nama spreadsheet: <strong className="text-white">DATABASE TABUNGAN ATLIT IKS PI KOTA KEDIRI</strong>.
                 </p>
-                <p className="pt-1">
-                  <strong>Penyebab 2:</strong> Memasukkan link Google Spreadsheet (<code>docs.google.com/spreadsheets</code>) atau link editor, bukan link Web App (<code>script.google.com/macros/s/.../exec</code>).
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 2: BUKA APPS SCRIPT</span>
+                <p>
+                  Di lembar spreadsheet, klik menu atas: <strong>Ekstensi (Extensions)</strong> &gt; <strong>Apps Script</strong>.
                 </p>
-                <p className="text-amber-300">
-                  ➔ <strong>Solusi:</strong> Gunakan link Web App berakhiran <code>/exec</code> dari menu Deploy. Jika belum memiliki Web App, kosongkan kolom URL untuk menggunakan penyimpanan database lokal yang cepat & aman.
+                <p className="text-slate-400 text-[11px]">
+                  Beri nama proyek di pojok kiri atas: <strong className="text-white">Backend_Tabungan_IKSPI</strong>.
                 </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 3: TEMPEL KODE (Code.gs)</span>
+                <p>
+                  Buka tab <strong>"Kode Backend (Code.gs)"</strong> pada halaman ini, klik tombol <strong>"Salin Semua Kode.gs"</strong>.
+                </p>
+                <p className="text-slate-400 text-[11px]">
+                  Hapus semua kode lama di Apps Script, paste kode baru ini, lalu tekan <strong>Simpan (Ctrl + S)</strong>.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 4: INISIALISASI DATABASE & DRIVE</span>
+                <p>
+                  Di toolbar atas Apps Script, pilih fungsi <code>initDatabase</code> lalu klik tombol <strong>Jalankan (Run)</strong>.
+                </p>
+                <p className="text-slate-400 text-[11px]">
+                  Beri izin akses (<em>Review Permissions &gt; Advanced &gt; Go to Backend_Tabungan_IKSPI</em>). Otomatis membuat 9 sheet lengkap dan folder Google Drive bukti transfer!
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-950 border border-amber-500/30 space-y-2 text-xs">
+              <span className="font-mono text-amber-400 font-bold text-[11px] flex items-center gap-1.5">
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                <span>LANGKAH 5: DEPLOY SEBAGAI WEB APP (MENDAPATKAN URL BACKEND)</span>
+              </span>
+              <p className="text-slate-300 text-[11px]">
+                Di Google Apps Script, klik tombol biru <strong>Deploy (Terapkan)</strong> di pojok kanan atas &gt; pilih <strong>New deployment (Penerapan baru)</strong>:
+              </p>
+              <ul className="list-disc pl-5 text-slate-300 space-y-1 text-[11px]">
+                <li>Klik ikon roda gigi (Select type) &gt; pilih <strong>Web app</strong>.</li>
+                <li>Description: <code>API Tabungan Atlit v1</code></li>
+                <li>Execute as: <strong>Me (email Google Anda)</strong></li>
+                <li>
+                  <strong className="text-amber-300">Who has access: Wajib pilih "Anyone" (Siapa saja)</strong> agar aplikasi web frontend dapat menyimpan data tanpa terhalang form login Google!
+                </li>
+                <li>Klik <strong>Deploy</strong>, lalu salin <strong>Web App URL</strong> yang berakhiran <code>/exec</code>.</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* FASE 2: EXPORT FROM AI STUDIO TO GITHUB */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-400 border-b border-amber-500/20 pb-2 font-mono">
+              <FolderGit2 className="w-4 h-4 text-purple-400" />
+              <span>FASE 2: EKSPOR KODE DARI GOOGLE AI STUDIO KE REPOSITORY GITHUB</span>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 6: UNDUH / EKSPOR SOURCE CODE DARI GOOGLE AI STUDIO</span>
+                <p>
+                  Di antarmuka Google AI Studio Build tempat Anda sedang membuka proyek ini:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                    <div className="font-bold text-white text-[11px] mb-1 flex items-center gap-1.5">
+                      <Download className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Metode A: Download Zip (Paling Direkomendasikan)</span>
+                    </div>
+                    <p className="text-slate-400 text-[11px]">
+                      Klik tombol <strong>Export / Download Code</strong> di pojok kanan atas layar AI Studio. Simpan file zip dan ekstrak ke folder komputer Anda (misal: <code>C:\Projects\tabungan-atlit-ikspi</code>).
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                    <div className="font-bold text-white text-[11px] mb-1 flex items-center gap-1.5">
+                      <GitBranch className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Metode B: Connect / Push Langsung via AI Studio Git</span>
+                    </div>
+                    <p className="text-slate-400 text-[11px]">
+                      Jika di toolbar AI Studio tersedia opsi <strong>"Push to GitHub"</strong> atau <strong>"Export to GitHub"</strong>, Anda dapat langsung mengaitkan akun GitHub dan AI Studio akan membuatkan repository otomatis.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 7: BUAT REPOSITORY BARU DI GITHUB</span>
+                <ol className="list-decimal pl-5 space-y-1 text-slate-300 text-[11px]">
+                  <li>
+                    Buka situs <a href="https://github.com/new" target="_blank" rel="noreferrer" className="text-amber-400 underline font-semibold inline-flex items-center gap-1">github.com/new <ExternalLink className="w-3 h-3" /></a> dan pastikan Anda sudah login ke akun GitHub.
+                  </li>
+                  <li>
+                    Di kolom <strong>Repository name</strong>, ketikkan: <code className="text-amber-300 bg-slate-900 px-1.5 py-0.5 rounded">tabungan-atlit-ikspi</code>.
+                  </li>
+                  <li>
+                    Pilih <strong>Public</strong> (dapat dilihat publik) atau <strong>Private</strong> (rahasia hanya akun Anda) sesuai preferensi.
+                  </li>
+                  <li>
+                    <strong className="text-amber-400">PENTING:</strong> Jangan centang <em>"Add a README file"</em>, jangan centang <em>"Add .gitignore"</em>, dan jangan centang <em>"Choose a license"</em> karena file-file tersebut sudah lengkap disediakan di dalam proyek ini.
+                  </li>
+                  <li>
+                    Klik tombol hijau <strong>Create repository</strong>.
+                  </li>
+                </ol>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="font-mono text-amber-400 font-bold text-[11px] flex items-center gap-1.5">
+                    <Terminal className="w-4 h-4 text-emerald-400" />
+                    <span>LANGKAH 8: PUSH KODE KE GITHUB DARI KOMPUTER ANDA</span>
+                  </span>
+                  <button
+                    onClick={() =>
+                      handleCopySnippet(
+                        'git-commands',
+                        `git init\ngit add .\ngit commit -m "feat: initial commit tabungan atlit iks pi kota kediri"\ngit branch -M main\ngit remote add origin https://github.com/USERNAME_ANDA/tabungan-atlit-ikspi.git\ngit push -u origin main`
+                      )
+                    }
+                    className="self-start sm:self-auto px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition"
+                  >
+                    {copiedSnippet === 'git-commands' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedSnippet === 'git-commands' ? 'Tersalin!' : 'Salin Perintah Git'}</span>
+                  </button>
+                </div>
+
+                <p className="text-slate-400 text-[11px]">
+                  Buka Command Prompt (CMD), PowerShell, atau Git Bash di dalam folder proyek hasil unduhan tadi, lalu jalankan perintah berikut (ganti <code>USERNAME_ANDA</code> dengan username GitHub Anda):
+                </p>
+
+                <div className="relative">
+                  <pre className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[11px] text-amber-300 leading-relaxed overflow-x-auto">
+{`# 1. Masuk ke folder proyek
+cd path/ke/folder/tabungan-atlit-ikspi
+
+# 2. Inisialisasi git lokal
+git init
+
+# 3. Tambahkan semua file proyek
+git add .
+
+# 4. Buat commit pertama
+git commit -m "feat: initial commit tabungan atlit iks pi kota kediri"
+
+# 5. Ubah branch utama menjadi main
+git branch -M main
+
+# 6. Hubungkan ke repository GitHub Anda (ganti USERNAME_ANDA)
+git remote add origin https://github.com/USERNAME_ANDA/tabungan-atlit-ikspi.git
+
+# 7. Upload / push kode ke GitHub
+git push -u origin main`}
+                  </pre>
+                </div>
+
+                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-[11px] flex items-start gap-2">
+                  <Info className="w-4 h-4 shrink-0 text-blue-400 mt-0.5" />
+                  <span>
+                    <strong>Otomatis Aman:</strong> File <code>.gitignore</code> sudah kami sertakan dalam proyek ini sehingga folder berat <code>node_modules</code> dan file cache tidak akan ter-upload ke GitHub.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FASE 3: DEPLOYMENT KE VERCEL */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-400 border-b border-amber-500/20 pb-2 font-mono">
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span>FASE 3: HUBUNGKAN GITHUB KE VERCEL (WEBSITE ONLINE 24 JAM)</span>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-300">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 9: LOGIN & IMPOR PROYEK DI VERCEL</span>
+                <ol className="list-decimal pl-5 space-y-1 text-slate-300 text-[11px]">
+                  <li>
+                    Buka situs <a href="https://vercel.com" target="_blank" rel="noreferrer" className="text-amber-400 underline font-semibold inline-flex items-center gap-1">vercel.com <ExternalLink className="w-3 h-3" /></a>.
+                  </li>
+                  <li>
+                    Klik <strong>Sign Up</strong> atau <strong>Log In</strong>, lalu pilih <strong>Continue with GitHub</strong> untuk menyinkronkan akun.
+                  </li>
+                  <li>
+                    Pada dashboard Vercel, klik tombol <strong>"Add New..."</strong> di kanan atas, lalu pilih <strong>"Project"</strong>.
+                  </li>
+                  <li>
+                    Di bagian <em>"Import Git Repository"</em>, cari repository <strong>tabungan-atlit-ikspi</strong> yang baru saja dibuat, lalu klik tombol biru <strong>"Import"</strong> di sebelahnya.
+                  </li>
+                </ol>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 10: KONFIGURASI BUILD SETTINGS DI VERCEL</span>
+                <p className="text-slate-400 text-[11px]">
+                  Pada layar <em>"Configure Project"</em>, pastikan pengaturan berikut sesuai:
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="text-slate-400">Framework Preset:</span>
+                    <div className="font-mono font-bold text-white flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 text-[10px]">Vite</span>
+                      <span>(Otomatis terdeteksi)</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="text-slate-400">Root Directory:</span>
+                    <div className="font-mono font-bold text-white">./ (Biarkan default)</div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="text-slate-400">Build Command:</span>
+                    <div className="font-mono font-bold text-amber-300">npm run build</div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                    <span className="text-slate-400">Output Directory:</span>
+                    <div className="font-mono font-bold text-white">dist</div>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300 space-y-1">
+                  <div className="font-bold text-white flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Versi Node.js: 20.x atau 22.x</span>
+                  </div>
+                  <p className="text-slate-400">
+                    File <code>package.json</code> telah disesuaikan untuk kompatibilitas penuh Node.js 22.x di server Vercel.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="font-mono text-amber-400 font-bold text-[11px]">LANGKAH 11: ATUR ENVIRONMENT VARIABLES (VITE_API_URL)</span>
+                  <button
+                    onClick={() =>
+                      handleCopySnippet('env-key', 'VITE_API_URL')
+                    }
+                    className="self-start sm:self-auto px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition"
+                  >
+                    {copiedSnippet === 'env-key' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedSnippet === 'env-key' ? 'Tersalin!' : 'Salin Key: VITE_API_URL'}</span>
+                  </button>
+                </div>
+
+                <p className="text-slate-400 text-[11px]">
+                  Buka dropdown <strong>"Environment Variables"</strong> di halaman konfigurasi Vercel sebelum mengklik Deploy:
+                </p>
+
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-[11px]">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span className="font-bold text-slate-400 w-20">Key:</span>
+                    <code className="px-2 py-1 rounded bg-slate-950 border border-slate-700 font-mono text-amber-400 font-bold">
+                      VITE_API_URL
+                    </code>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <span className="font-bold text-slate-400 w-20">Value:</span>
+                    <span className="text-slate-300 font-mono text-[10px] break-all">
+                      https://script.google.com/macros/s/AKfycb.../exec (URL Web App dari Langkah 5)
+                    </span>
+                  </div>
+                  <p className="text-slate-500 text-[10px] pt-1">
+                    * Catatan: Jika saat deploy awal Anda belum memasang Apps Script, variabel ini bisa dikosongkan terlebih dahulu; aplikasi otomatis memakai persistent database lokal dan dapat ditautkan ke Spreadsheet kapan saja!
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-emerald-500/30 space-y-2">
+                <span className="font-mono text-emerald-400 font-bold text-[11px] flex items-center gap-1.5">
+                  <Rocket className="w-4 h-4 text-emerald-400" />
+                  <span>LANGKAH 12: KLIK "DEPLOY" & WEBSITE SELESAI DITERBITKAN!</span>
+                </span>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  Klik tombol biru <strong>"Deploy"</strong>. Tunggu sekitar 1 hingga 2 menit hingga proses build selesai. Setelah muncul animasi kembang api sukses, Vercel akan langsung memberikan link domain website Anda yang aktif 24 jam nonstop, misalnya:
+                </p>
+                <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between">
+                  <code className="text-emerald-400 font-mono text-xs font-bold">
+                    https://tabungan-atlit-ikspi.vercel.app
+                  </code>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                    LIVE ONLINE SSL
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* FASE 4: VERIFIKASI & TIPS PEMELIHARAAN */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm font-bold text-amber-400 border-b border-amber-500/20 pb-2 font-mono">
+              <Shield className="w-4 h-4 text-blue-400" />
+              <span>FASE 4: VERIFIKASI AKHIR & PEMELIHARAAN SISTEM OTOMATIS (CI/CD)</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">LOGIN PERTAMA SEBAGAI ADMIN</span>
+                <p className="text-[11px] leading-relaxed">
+                  Buka website Vercel yang baru Anda dapatkan, lalu login menggunakan akun admin default:
+                </p>
+                <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 font-mono text-[11px] text-slate-200">
+                  <div>Username: <strong className="text-amber-400">admin</strong></div>
+                  <div>Password: <strong className="text-emerald-400">admin123</strong></div>
+                </div>
+                <p className="text-slate-400 text-[10px]">
+                  Buka menu <strong>Pengaturan Sistem</strong> &gt; klik <strong>"Sinkronkan Semua Data ke Spreadsheet"</strong> untuk memvalidasi koneksi awal.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="font-mono text-amber-400 font-bold text-[11px]">UPDATE OTOMATIS DI MASA DEPAN (CI/CD)</span>
+                <p className="text-[11px] leading-relaxed">
+                  Setiap kali Anda mengedit kode di masa depan, cukup push commit baru ke GitHub:
+                </p>
+                <code className="block p-2 rounded bg-slate-900 border border-slate-800 text-amber-300 font-mono text-[10px]">
+                  git add . && git commit -m "Update fitur" && git push
+                </code>
+                <p className="text-emerald-400 text-[10px]">
+                  Vercel akan otomatis mendeteksi perubahan dan memperbarui website live Anda dalam hitungan detik tanpa mematikan sistem (zero-downtime)!
+                </p>
+              </div>
+            </div>
+
+            {/* Troubleshooting Box */}
+            <div className="p-4 md:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3">
+              <div className="flex items-center gap-2 font-bold text-amber-400 text-xs">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>Troubleshooting: Pertanyaan & Solusi Kendala Umum</span>
+              </div>
+
+              <div className="space-y-2.5 text-[11px] text-slate-300 pl-2 border-l-2 border-amber-500/40">
+                <div>
+                  <strong className="text-white">1. Halaman Error 404 saat Refresh di Vercel?</strong>
+                  <p className="text-slate-400 mt-0.5">
+                    <strong>Sudah Teratasi Otomatis:</strong> Kami telah menyertakan file <code>vercel.json</code> dengan aturan routing rewrite ke <code>/index.html</code>. Halaman dashboard admin, login, dan formulir atlet akan tetap berjalan normal saat di-refresh (F5).
+                  </p>
+                </div>
+
+                <div>
+                  <strong className="text-white">2. Error "SyntaxError: Unexpected end of JSON input"?</strong>
+                  <p className="text-slate-400 mt-0.5">
+                    Penyebab utama: Pilihan <em>"Who has access"</em> di Google Apps Script belum diset ke <strong>"Anyone"</strong>, atau URL yang dimasukkan bukan URL Web App berakhiran <code>/exec</code>. Pastikan memilih <strong>New version</strong> setiap kali melakukan Deploy ulang di Apps Script.
+                  </p>
+                </div>
+
+                <div>
+                  <strong className="text-white">3. Menggunakan Domain Sendiri (Custom Domain)?</strong>
+                  <p className="text-slate-400 mt-0.5">
+                    Di dashboard Vercel, buka <strong>Settings &gt; Domains</strong>, masukkan domain Anda (misal: <code>tabungan.ikspikediri.org</code>), lalu ikuti petunjuk DNS (CNAME / A record) yang diberikan oleh Vercel.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
