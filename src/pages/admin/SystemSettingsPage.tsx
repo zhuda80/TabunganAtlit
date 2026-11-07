@@ -1646,6 +1646,24 @@ export const SystemSettingsPage: React.FC = () => {
             </button>
           </div>
 
+          {/* Important instructions for updating deployment */}
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs space-y-2">
+            <div className="flex items-center gap-2 font-bold text-amber-400">
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span>Penting: Cara Memperbarui Kode jika Mengalami "Sinkronisasi Gagal"</span>
+            </div>
+            <ol className="list-decimal pl-5 space-y-1 text-slate-300 text-[11px] leading-relaxed">
+              <li>Klik tombol <strong>"Salin Semua Kode.gs"</strong> di atas.</li>
+              <li>Buka proyek Google Apps Script Anda (di Google Spreadsheet: menu <em>Extensions &gt; Apps Script</em>).</li>
+              <li>Hapus semua kode lama di file <code>Code.gs</code> lalu <strong>Paste (Tempel)</strong> kode baru ini.</li>
+              <li>Klik ikon <strong>Simpan (Save / Ctrl+S)</strong>.</li>
+              <li>
+                <strong>Wajib Deploy Versi Baru:</strong> Klik <strong>Deploy</strong> (Terapkan) &gt; <strong>Manage deployments</strong> (Kelola penerapan) &gt; Klik ikon <strong>Edit</strong> (pensil) &gt; Di bagian Version pilih <strong>New version</strong> (Versi baru) &gt; Klik <strong>Deploy</strong>.
+              </li>
+              <li>Kembali ke aplikasi ini dan klik <strong>"Sinkronkan Semua Data ke Spreadsheet"</strong> di tab Pengaturan Umum. Semua lembar kerja (9 sheets) termasuk tab Pendaftaran atlet akan otomatis dibuat dan disinkronkan!</li>
+            </ol>
+          </div>
+
           <div className="relative">
             <pre className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 max-h-[500px] overflow-y-auto overflow-x-auto leading-relaxed">
               {GOOGLE_APPS_SCRIPT_CODE}

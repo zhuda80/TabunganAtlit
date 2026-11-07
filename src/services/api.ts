@@ -504,24 +504,23 @@ export const api = {
     nomorWhatsApp: string;
     unitRanting: string;
     fotoUrl?: string;
-  }): Promise<{ success: boolean; message: string }> {
-    const remote = await this.callRemoteGas('registerAthlete', data);
-    if (remote) return remote;
-
-    const users = getStore<any[]>('users', SEED_USERS);
+  }): Promise<{ success: boolean; message: string; regId?: string }> {
+    const cleanUsername = data.username.trim();
     const pendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
+    const users = getStore<any[]>('users', SEED_USERS);
 
-    if (users.some(u => u.username.toLowerCase() === data.username.toLowerCase())) {
+    if (users.some(u => u.username.toLowerCase() === cleanUsername.toLowerCase())) {
       return { success: false, message: 'Username sudah digunakan oleh pengguna lain.' };
     }
 
-    if (pendings.some(p => p.username.toLowerCase() === data.username.toLowerCase() && p.status === 'MENUNGGU_PERSETUJUAN')) {
+    if (pendings.some(p => p.username.toLowerCase() === cleanUsername.toLowerCase() && p.status === 'MENUNGGU_PERSETUJUAN')) {
       return { success: false, message: 'Pendaftaran dengan username ini sedang menunggu persetujuan admin.' };
     }
 
+    const regId = 'REG-' + Date.now();
     const newPending: PendingRegistration = {
-      id: 'REG-' + Date.now(),
-      username: data.username.trim(),
+      id: regId,
+      username: cleanUsername,
       password: data.password,
       namaLengkap: data.namaLengkap.trim(),
       nomorInduk: (data.nomorInduk && data.nomorInduk.trim()) ? data.nomorInduk.trim() : '-',
@@ -538,12 +537,33 @@ export const api = {
       status: 'MENUNGGU_PERSETUJUAN',
     };
 
-    setStore('pendings', [newPending, ...pendings]);
+    let remoteMsg = '';
+    try {
+      const remote = await this.callRemoteGas('registerAthlete', data);
+      if (remote) {
+        if (!remote.success) {
+          return remote;
+        }
+        if (remote.regId) {
+          newPending.id = remote.regId;
+        }
+        remoteMsg = remote.message;
+      }
+    } catch (e) {
+      console.warn('Remote register error:', e);
+    }
+
+    setStore('pendings', [newPending, ...pendings.filter(p => p.id !== newPending.id)]);
     recordActivity(data.username, 'ATLIT', 'PENDAFTARAN_BARU', 'REGISTRASI', `Pengajuan pendaftaran atlit: ${data.namaLengkap} (${data.unitRanting})`);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_registrations_updated'));
+    }
 
     return {
       success: true,
-      message: 'Pendaftaran berhasil dikirim! Menunggu verifikasi dari Admin IKS PI Kota Kediri.',
+      message: remoteMsg || 'Pendaftaran berhasil dikirim! Menunggu verifikasi dari Admin IKS PI Kota Kediri.',
+      regId: newPending.id,
     };
   },
 
@@ -773,9 +793,53 @@ export const api = {
 
   // 5. REGISTRATION APPROVALS
   async getPendingRegistrations(): Promise<PendingRegistration[]> {
-    const remote = await this.callRemoteGas('getPendingRegistrations');
-    if (remote && remote.registrations) return remote.registrations;
-    return getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
+    const localPendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
+    const merged = [...localPendings];
+
+    try {
+      const remote = await this.callRemoteGas('getPendingRegistrations');
+      if (remote && Array.isArray(remote.registrations)) {
+        for (const r of remote.registrations) {
+          const existingIdx = merged.findIndex(
+            p => p.id === r.id || (p.username.toLowerCase() === (r.username || '').toLowerCase() && p.status === 'MENUNGGU_PERSETUJUAN')
+          );
+          const normalized: PendingRegistration = {
+            id: r.id,
+            username: r.username,
+            password: r.password || (existingIdx >= 0 ? merged[existingIdx].password : 'atlit123'),
+            namaLengkap: r.namaLengkap,
+            nomorInduk: r.nomorInduk || '-',
+            nik: r.nik,
+            angkatan: r.angkatan,
+            niw: r.niw,
+            tempatLahir: r.tempatLahir || '',
+            tanggalLahir: r.tanggalLahir || '',
+            alamat: r.alamat || '',
+            nomorWhatsApp: r.nomorWhatsApp || '',
+            unitRanting: r.unitRanting || '',
+            fotoUrl: r.fotoUrl,
+            tanggalDaftar: r.tanggalDaftar || r.tanggalPengajuan || r.createdAt || new Date().toISOString(),
+            status: r.status || 'MENUNGGU_PERSETUJUAN',
+            catatanAdmin: r.catatanAdmin,
+            diperiksaOleh: r.diperiksaOleh,
+            tanggalPemeriksaan: r.tanggalPemeriksaan,
+          };
+
+          if (existingIdx >= 0) {
+            merged[existingIdx] = { ...merged[existingIdx], ...normalized };
+          } else {
+            merged.unshift(normalized);
+          }
+        }
+        setStore('pendings', merged);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch remote pending registrations:', e);
+    }
+
+    return merged.sort(
+      (a, b) => new Date(b.tanggalDaftar || 0).getTime() - new Date(a.tanggalDaftar || 0).getTime()
+    );
   },
 
   async approveRegistration(regId: string, catatanAdmin: string, adminUsername: string): Promise<{ success: boolean; message: string }> {
@@ -834,6 +898,9 @@ export const api = {
     setStore('users', [...users, newUser]);
 
     recordActivity(adminUsername, 'ADMIN', 'APPROVE_REGISTRASI', 'REGISTRASI', `Menyetujui pendaftaran atlit ${reg.namaLengkap}`);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_registrations_updated'));
+    }
     return { success: true, message: remote?.message || 'Pendaftaran atlet disetujui. Akun sekarang aktif.' };
   },
 
@@ -852,6 +919,9 @@ export const api = {
 
     setStore('pendings', pendings);
     recordActivity(adminUsername, 'ADMIN', 'REJECT_REGISTRASI', 'REGISTRASI', `Menolak pendaftaran atlit ${reg.namaLengkap}: ${catatanAdmin}`);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_registrations_updated'));
+    }
     return { success: true, message: remote?.message || 'Pendaftaran atlet berhasil ditolak.' };
   },
 
@@ -1697,24 +1767,62 @@ export const api = {
     if (!url) {
       return { success: false, message: 'URL Web App belum dikonfigurasi di tab Pengaturan.' };
     }
+
+    // Step 1: Ensure remote database sheets are initialized
+    try {
+      await this.callRemoteGas('initDatabase', {});
+    } catch (e) {
+      console.warn('initDatabase notice:', e);
+    }
+
     const athletes = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
     const deposits = getStore<DepositTransaction[]>('deposits', SEED_DEPOSITS);
     const withdrawals = getStore<WithdrawalTransaction[]>('withdrawals', SEED_WITHDRAWALS);
     const users = getStore<any[]>('users', SEED_USERS);
+    const pendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
 
     const remote = await this.callRemoteGas('syncDatabase', {
       athletes,
       deposits,
       withdrawals,
       users,
+      pendings,
     });
 
     if (remote && remote.success) {
-      return { success: true, message: remote.message || 'Seluruh data atlet dan transaksi berhasil disinkronkan ke Google Spreadsheet!' };
+      // Step 2: Sync back any remote registrations into local store
+      try {
+        const remotePendings = await this.callRemoteGas('getPendingRegistrations');
+        if (remotePendings && Array.isArray(remotePendings.registrations)) {
+          const merged = [...pendings];
+          for (const rp of remotePendings.registrations) {
+            if (!merged.some(m => m.id === rp.id || (m.username.toLowerCase() === (rp.username || '').toLowerCase() && m.status === 'MENUNGGU_PERSETUJUAN'))) {
+              merged.push({
+                ...rp,
+                tanggalDaftar: rp.tanggalDaftar || rp.tanggalPengajuan || new Date().toISOString(),
+                status: rp.status || 'MENUNGGU_PERSETUJUAN',
+              });
+            }
+          }
+          setStore('pendings', merged);
+        }
+      } catch (e) {
+        console.warn('Sync back pendings notice:', e);
+      }
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('ikspi_registrations_updated'));
+      }
+
+      return {
+        success: true,
+        message: remote.message || 'Seluruh data atlet, transaksi, dan pendaftaran berhasil disinkronkan ke Google Spreadsheet!',
+      };
     }
+
     return {
       success: false,
-      message: remote?.message || 'Sinkronisasi gagal. Pastikan kode Google Apps Script terbaru telah di-deploy.',
+      message: remote?.message || 'Sinkronisasi gagal. Pastikan kode Google Apps Script terbaru telah di-deploy dengan akses "Anyone" (Siapa saja) dan URL berakhiran /exec.',
     };
   },
 

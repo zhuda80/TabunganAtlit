@@ -65,9 +65,19 @@ function handleRequest(e) {
       return jsonResponse({ success: false, message: "Action parameter is required" });
     }
 
-    // Public actions
+    // Auto-create core sheets if spreadsheet is fresh / newly created
+    var ssAuto = SpreadsheetApp.getActiveSpreadsheet();
+    if (!ssAuto.getSheetByName(SHEETS.USERS) || !ssAuto.getSheetByName(SHEETS.PENDAFTARAN)) {
+      initDatabase({});
+    }
+
+    // Public and bootstrap actions
     if (action === "initDatabase") {
       output = initDatabase(params);
+      return jsonResponse(output);
+    }
+    if (action === "syncDatabase") {
+      output = handleSyncDatabase(null, params);
       return jsonResponse(output);
     }
     if (action === "login") {
@@ -76,6 +86,10 @@ function handleRequest(e) {
     }
     if (action === "registerAthlete") {
       output = handleRegisterAthlete(params);
+      return jsonResponse(output);
+    }
+    if (action === "getPendingRegistrations") {
+      output = handleGetPendingRegistrations(null, params);
       return jsonResponse(output);
     }
     if (action === "resetDefaultAdmin") {
@@ -566,6 +580,9 @@ function handleRegisterAthlete(params) {
   var password = params.password || "";
   var namaLengkap = (params.namaLengkap || "").trim();
   var nomorInduk = (params.nomorInduk || "").trim();
+  var nik = (params.nik || "").trim();
+  var angkatan = (params.angkatan || "").trim();
+  var niw = (params.niw || "").trim();
   var tempatLahir = (params.tempatLahir || "").trim();
   var tanggalLahir = params.tanggalLahir || "";
   var alamat = (params.alamat || "").trim();
@@ -576,13 +593,23 @@ function handleRegisterAthlete(params) {
   if (!username || !password || !namaLengkap || !unitRanting) {
     return { success: false, message: "Nama lengkap, unit ranting, username, dan password wajib diisi." };
   }
-  if (!nomorInduk) {
-    nomorInduk = "-";
+  if (!nomorInduk || nomorInduk === "-") {
+    if (angkatan && niw) {
+      nomorInduk = angkatan + " / " + niw;
+    } else {
+      nomorInduk = "-";
+    }
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetUsers = ss.getSheetByName(SHEETS.USERS);
-  var sheetReg = ss.getSheetByName(SHEETS.PENDAFTARAN);
+  var sheetUsers = getOrCreateSheet(ss, SHEETS.USERS, [
+    "USER_ID", "USERNAME", "PASSWORD_HASH", "SALT", "ROLE", "STATUS", "CREATED_AT", "LAST_LOGIN", "SESSION_TOKEN", "TOKEN_EXPIRES"
+  ]);
+  var sheetReg = getOrCreateSheet(ss, SHEETS.PENDAFTARAN, [
+    "REG_ID", "USERNAME", "PASSWORD_HASH", "SALT", "NOMOR_INDUK", "NAMA_LENGKAP", "TEMPAT_LAHIR",
+    "TANGGAL_LAHIR", "ALAMAT", "NOMOR_WA", "UNIT_RANTING", "FOTO_URL", "STATUS", "CATATAN_ADMIN",
+    "DIPERIKSA_OLEH", "TANGGAL_DAFTAR", "TANGGAL_PERIKSA"
+  ]);
 
   // Check username unique in USERS
   var usersData = sheetUsers.getDataRange().getValues();
@@ -611,12 +638,29 @@ function handleRegisterAthlete(params) {
     "MENUNGGU_PERSETUJUAN", "", "", now, ""
   ]);
 
-  logActivity(ss, username, "ATLIT", "PENDAFTARAN_BARU", "REGISTRASI", "Pendaftaran atlit baru diajukan: " + namaLengkap);
+  logActivity(ss, username, "ATLIT", "PENDAFTARAN_BARU", "REGISTRASI", "Pendaftaran atlit baru diajukan: " + namaLengkap + " (" + unitRanting + ")");
 
   return {
     success: true,
     message: "Pendaftaran berhasil dikirim! Akun Anda sedang diverifikasi oleh Pengurus Admin IKS PI Kota Kediri.",
-    regId: regId
+    regId: regId,
+    registration: {
+      id: regId,
+      username: username,
+      namaLengkap: namaLengkap,
+      nomorInduk: nomorInduk,
+      nik: nik,
+      angkatan: angkatan,
+      niw: niw,
+      tempatLahir: tempatLahir,
+      tanggalLahir: tanggalLahir,
+      alamat: alamat,
+      nomorWhatsApp: nomorWhatsApp,
+      unitRanting: unitRanting,
+      fotoUrl: fotoUrl,
+      status: "MENUNGGU_PERSETUJUAN",
+      tanggalDaftar: now
+    }
   };
 }
 
@@ -1368,16 +1412,21 @@ function handleUpdateAthlete(session, params) {
 
 function handleSyncDatabase(session, params) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetUsers = ss.getSheetByName(SHEETS.USERS);
-  var sheetAtlit = ss.getSheetByName(SHEETS.DATA_ATLIT);
-  var sheetSaldo = ss.getSheetByName(SHEETS.SALDO);
-
-  if (!sheetUsers || !sheetAtlit || !sheetSaldo) {
-    initDatabase({});
-    sheetUsers = ss.getSheetByName(SHEETS.USERS);
-    sheetAtlit = ss.getSheetByName(SHEETS.DATA_ATLIT);
-    sheetSaldo = ss.getSheetByName(SHEETS.SALDO);
-  }
+  var sheetUsers = getOrCreateSheet(ss, SHEETS.USERS, [
+    "USER_ID", "USERNAME", "PASSWORD_HASH", "SALT", "ROLE", "STATUS", "CREATED_AT", "LAST_LOGIN", "SESSION_TOKEN", "TOKEN_EXPIRES"
+  ]);
+  var sheetAtlit = getOrCreateSheet(ss, SHEETS.DATA_ATLIT, [
+    "ATHLETE_ID", "USER_ID", "NOMOR_INDUK", "NAMA_LENGKAP", "TEMPAT_LAHIR", "TANGGAL_LAHIR", 
+    "ALAMAT", "NOMOR_WA", "UNIT_RANTING", "FOTO_URL", "STATUS", "CREATED_AT", "UPDATED_AT"
+  ]);
+  var sheetSaldo = getOrCreateSheet(ss, SHEETS.SALDO, [
+    "ATHLETE_ID", "SALDO_SAAT_INI", "TOTAL_SETORAN", "TOTAL_PENARIKAN", "TERAKHIR_DIPERBARUI"
+  ]);
+  var sheetReg = getOrCreateSheet(ss, SHEETS.PENDAFTARAN, [
+    "REG_ID", "USERNAME", "PASSWORD_HASH", "SALT", "NOMOR_INDUK", "NAMA_LENGKAP", "TEMPAT_LAHIR",
+    "TANGGAL_LAHIR", "ALAMAT", "NOMOR_WA", "UNIT_RANTING", "FOTO_URL", "STATUS", "CATATAN_ADMIN",
+    "DIPERIKSA_OLEH", "TANGGAL_DAFTAR", "TANGGAL_PERIKSA"
+  ]);
 
   var athletes = params.athletes || [];
   var existingAtlit = sheetAtlit.getDataRange().getValues();
@@ -1415,7 +1464,7 @@ function handleSyncDatabase(session, params) {
     }
   }
 
-  // Ensure default demo users exist
+  // Ensure default admin & users exist
   var existingUsers = sheetUsers.getDataRange().getValues();
   var usersList = params.users || [];
   for (var u = 0; u < usersList.length; u++) {
@@ -1429,13 +1478,13 @@ function handleSyncDatabase(session, params) {
     }
     if (!uFound) {
       var salt = usr.salt || Utilities.getUuid().substring(0, 8);
-      var hash = hashPassword(usr.passwordHash || "atlit123", salt);
+      var hash = hashPassword(usr.passwordHash || "admin123", salt);
       sheetUsers.appendRow([
         usr.userId || ("USR-" + new Date().getTime()),
         usr.username,
         hash,
         salt,
-        usr.role || "ATLIT",
+        usr.role || "ADMIN",
         usr.status || "AKTIF",
         usr.createdAt || new Date().toISOString(),
         "", "", ""
@@ -1443,12 +1492,53 @@ function handleSyncDatabase(session, params) {
     }
   }
 
-  logActivity(ss, session.username || "admin", session.role || "ADMIN", "SYNC_DATABASE", "SISTEM", "Sinkronisasi database berhasil (" + atlitCount + " atlit baru ditambahkan)");
+  // Sync pending athlete registrations
+  var pendings = params.pendings || [];
+  var existingReg = sheetReg.getDataRange().getValues();
+  var regCount = 0;
+  for (var p = 0; p < pendings.length; p++) {
+    var reg = pendings[p];
+    var rFound = false;
+    for (var r = 1; r < existingReg.length; r++) {
+      if (existingReg[r][0] === reg.id || (existingReg[r][1] && existingReg[r][1].toString().toLowerCase() === (reg.username || "").toLowerCase() && existingReg[r][12] === "MENUNGGU_PERSETUJUAN")) {
+        rFound = true;
+        break;
+      }
+    }
+    if (!rFound) {
+      var rNow = new Date().toISOString();
+      sheetReg.appendRow([
+        reg.id || ("REG-" + Date.now()),
+        reg.username,
+        reg.password || "",
+        "",
+        reg.nomorInduk || "-",
+        reg.namaLengkap || "",
+        reg.tempatLahir || "",
+        reg.tanggalLahir || "",
+        reg.alamat || "",
+        reg.nomorWhatsApp || "",
+        reg.unitRanting || "",
+        reg.fotoUrl || "",
+        reg.status || "MENUNGGU_PERSETUJUAN",
+        reg.catatanAdmin || "",
+        reg.diperiksaOleh || "",
+        reg.tanggalDaftar || rNow,
+        reg.tanggalPemeriksaan || ""
+      ]);
+      regCount++;
+    }
+  }
+
+  var actorName = session ? (session.username || "admin") : (params.username || "admin");
+  var actorRole = session ? (session.role || "ADMIN") : "ADMIN";
+  logActivity(ss, actorName, actorRole, "SYNC_DATABASE", "SISTEM", "Sinkronisasi database berhasil (" + atlitCount + " atlit, " + regCount + " pendaftaran disinkronkan)");
 
   return {
     success: true,
-    message: "Sinkronisasi data ke Google Spreadsheet berhasil! (" + atlitCount + " atlit baru disinkronkan)",
-    syncedAthletes: atlitCount
+    message: "Sinkronisasi data ke Google Spreadsheet berhasil! (" + atlitCount + " atlit, " + regCount + " pendaftar baru tersinkron)",
+    syncedAthletes: atlitCount,
+    syncedRegistrations: regCount
   };
 }
 
@@ -1601,19 +1691,34 @@ function handleGetBalance(session, params) {
 }
 
 function handleGetPendingRegistrations(session, params) {
-  if (session.role !== "ADMIN") return { success: false, message: "Akses ditolak." };
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheetReg = ss.getSheetByName(SHEETS.PENDAFTARAN);
-  if (!sheetReg) return { success: true, registrations: [] };
+  var sheetReg = getOrCreateSheet(ss, SHEETS.PENDAFTARAN, [
+    "REG_ID", "USERNAME", "PASSWORD_HASH", "SALT", "NOMOR_INDUK", "NAMA_LENGKAP", "TEMPAT_LAHIR",
+    "TANGGAL_LAHIR", "ALAMAT", "NOMOR_WA", "UNIT_RANTING", "FOTO_URL", "STATUS", "CATATAN_ADMIN",
+    "DIPERIKSA_OLEH", "TANGGAL_DAFTAR", "TANGGAL_PERIKSA"
+  ]);
 
   var data = sheetReg.getDataRange().getValues();
   var registrations = [];
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
+    if (!row[0]) continue;
+    var noInduk = (row[4] || "").toString();
+    var angkatan = "";
+    var niw = "";
+    if (noInduk.indexOf("/") !== -1) {
+      var parts = noInduk.split("/");
+      angkatan = parts[0].trim();
+      niw = parts[1].trim();
+    }
+    var tgl = row[15] ? new Date(row[15]).toISOString() : new Date().toISOString();
+
     registrations.push({
       id: row[0],
       username: row[1],
-      nomorInduk: row[4],
+      nomorInduk: noInduk || "-",
+      angkatan: angkatan,
+      niw: niw,
       namaLengkap: row[5],
       tempatLahir: row[6],
       tanggalLahir: row[7],
@@ -1621,11 +1726,12 @@ function handleGetPendingRegistrations(session, params) {
       nomorWhatsApp: row[9],
       unitRanting: row[10],
       fotoUrl: row[11],
-      status: row[12],
-      catatanAdmin: row[13],
-      diperiksaOleh: row[14],
-      tanggalPengajuan: row[15],
-      tanggalPemeriksaan: row[16]
+      status: row[12] || "MENUNGGU_PERSETUJUAN",
+      catatanAdmin: row[13] || "",
+      diperiksaOleh: row[14] || "",
+      tanggalDaftar: tgl,
+      tanggalPengajuan: tgl,
+      tanggalPemeriksaan: row[16] || ""
     });
   }
   return { success: true, registrations: registrations };

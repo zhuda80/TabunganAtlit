@@ -15,6 +15,7 @@ import {
   Calendar,
   Shield,
   Eye,
+  RefreshCw,
 } from 'lucide-react';
 
 export const RegistrationApprovalsPage: React.FC = () => {
@@ -41,6 +42,11 @@ export const RegistrationApprovalsPage: React.FC = () => {
 
   useEffect(() => {
     fetchRegistrations();
+    const handleUpdate = () => fetchRegistrations();
+    window.addEventListener('ikspi_registrations_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('ikspi_registrations_updated', handleUpdate);
+    };
   }, []);
 
   const handleProcess = async () => {
@@ -96,15 +102,30 @@ export const RegistrationApprovalsPage: React.FC = () => {
       )}
 
       {/* Header */}
-      <div>
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold mb-2">
-          <UserCheck className="w-3.5 h-3.5" />
-          <span>VERIFIKASI KEANGGOTAAN</span>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-xs font-semibold mb-2">
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>VERIFIKASI KEANGGOTAAN</span>
+            {registrations.filter((r) => r.status === 'MENUNGGU_PERSETUJUAN').length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-slate-950 text-[10px] font-black">
+                {registrations.filter((r) => r.status === 'MENUNGGU_PERSETUJUAN').length} Menunggu
+              </span>
+            )}
+          </div>
+          <h1 className="text-2xl font-extrabold text-white font-serif">Persetujuan Pendaftaran Atlit Baru</h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Calon atlet tidak dapat masuk ke sistem sebelum diverifikasi dan disetujui oleh pengurus cabang.
+          </p>
         </div>
-        <h1 className="text-2xl font-extrabold text-white font-serif">Persetujuan Pendaftaran Atlit Baru</h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Calon atlet tidak dapat masuk ke sistem sebelum diverifikasi oleh pengurus cabang.
-        </p>
+        <button
+          onClick={fetchRegistrations}
+          disabled={loading}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition disabled:opacity-50 self-start sm:self-auto cursor-pointer"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-amber-400' : 'text-slate-400'}`} />
+          <span>{loading ? 'Memuat...' : 'Segarkan Data'}</span>
+        </button>
       </div>
 
       {/* Registrations List */}
