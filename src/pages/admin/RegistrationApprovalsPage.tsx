@@ -54,7 +54,7 @@ export const RegistrationApprovalsPage: React.FC = () => {
     setProcessing(true);
     try {
       if (actionItem.action === 'APPROVE') {
-        const res = await api.approveRegistration(actionItem.item.id, adminNote || 'Disetujui sebagai atlit aktif IKS PI', user.username);
+        const res = await api.approveRegistration(actionItem.item, adminNote || 'Disetujui sebagai atlit aktif IKS PI Kota Kediri', user.username);
         if (res.success) {
           setToast({ type: 'success', message: res.message });
           setActionItem(null);
@@ -64,7 +64,7 @@ export const RegistrationApprovalsPage: React.FC = () => {
           setToast({ type: 'error', message: res.message });
         }
       } else {
-        const res = await api.rejectRegistration(actionItem.item.id, adminNote || 'Ditolak', user.username);
+        const res = await api.rejectRegistration(actionItem.item, adminNote || 'Ditolak', user.username);
         if (res.success) {
           setToast({ type: 'success', message: res.message });
           setActionItem(null);

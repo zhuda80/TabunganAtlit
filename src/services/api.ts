@@ -842,24 +842,61 @@ export const api = {
     );
   },
 
-  async approveRegistration(regId: string, catatanAdmin: string, adminUsername: string): Promise<{ success: boolean; message: string }> {
-    const remote = await this.callRemoteGas('approveRegistration', { regId, catatanAdmin });
+  async approveRegistration(
+    regIdOrItem: string | PendingRegistration,
+    catatanAdmin: string,
+    adminUsername: string
+  ): Promise<{ success: boolean; message: string }> {
+    const targetId = typeof regIdOrItem === 'string' ? regIdOrItem : regIdOrItem.id;
+    const itemProvided = typeof regIdOrItem === 'object' ? regIdOrItem : undefined;
 
     const pendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
-    const reg = pendings.find(p => p.id === regId);
-    if (!reg) return { success: false, message: 'Data pendaftaran tidak ditemukan.' };
-    if (reg.status !== 'MENUNGGU_PERSETUJUAN') return { success: false, message: 'Pendaftaran ini sudah diproses.' };
+    let regIndex = pendings.findIndex(
+      p => String(p.id).trim() === String(targetId).trim() ||
+      (itemProvided && p.username.toLowerCase() === itemProvided.username.toLowerCase())
+    );
 
+    let reg: PendingRegistration;
+    if (regIndex >= 0) {
+      reg = { ...pendings[regIndex] };
+    } else if (itemProvided) {
+      reg = { ...itemProvided };
+      pendings.unshift(reg);
+      regIndex = 0;
+    } else {
+      return { success: false, message: 'Data pendaftaran tidak ditemukan.' };
+    }
+
+    if (reg.status !== 'MENUNGGU_PERSETUJUAN') {
+      return { success: false, message: 'Pendaftaran ini sudah diproses sebelumnya.' };
+    }
+
+    // Call Google Apps Script remote endpoint
+    let remote: any = null;
+    try {
+      remote = await this.callRemoteGas('approveRegistration', {
+        regId: reg.id,
+        targetUsername: reg.username,
+        catatanAdmin,
+        adminUsername: adminUsername || 'admin',
+        username: adminUsername || 'admin',
+        registration: reg,
+      });
+    } catch (e) {
+      console.warn('Remote approve registration error:', e);
+    }
+
+    // Local state activation
     const athletes = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
     const users = getStore<any[]>('users', SEED_USERS);
 
-    const athleteId = 'ATL-' + String(athletes.length + 1).padStart(3, '0');
-    const userId = 'USR-ATL-' + Date.now();
+    const athleteId = remote?.athleteId || ('ATL-' + String(athletes.length + 1).padStart(3, '0'));
+    const userId = remote?.userId || ('USR-ATL-' + Date.now());
 
     const newAthlete: AthleteProfile = {
       id: athleteId,
       userId,
-      nomorInduk: reg.nomorInduk,
+      nomorInduk: reg.nomorInduk || '-',
       nik: reg.nik,
       angkatan: reg.angkatan,
       niw: reg.niw,
@@ -893,35 +930,79 @@ export const api = {
     reg.diperiksaOleh = adminUsername;
     reg.tanggalPemeriksaan = new Date().toISOString();
 
+    pendings[regIndex] = reg;
     setStore('pendings', pendings);
-    setStore('athletes', [...athletes, newAthlete]);
-    setStore('users', [...users, newUser]);
+    setStore('athletes', [...athletes.filter(a => a.id !== newAthlete.id && a.nomorInduk !== newAthlete.nomorInduk), newAthlete]);
+    setStore('users', [...users.filter(u => u.username.toLowerCase() !== newUser.username.toLowerCase()), newUser]);
 
-    recordActivity(adminUsername, 'ADMIN', 'APPROVE_REGISTRASI', 'REGISTRASI', `Menyetujui pendaftaran atlit ${reg.namaLengkap}`);
+    recordActivity(adminUsername, 'ADMIN', 'APPROVE_REGISTRASI', 'REGISTRASI', `Menyetujui pendaftaran atlit ${reg.namaLengkap} (${reg.unitRanting})`);
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('ikspi_registrations_updated'));
+      window.dispatchEvent(new Event('ikspi_athletes_updated'));
     }
-    return { success: true, message: remote?.message || 'Pendaftaran atlet disetujui. Akun sekarang aktif.' };
+
+    return {
+      success: true,
+      message: remote?.message || `Pendaftaran atlet ${reg.namaLengkap} berhasil disetujui! Akun sekarang aktif dan dapat login.`,
+    };
   },
 
-  async rejectRegistration(regId: string, catatanAdmin: string, adminUsername: string): Promise<{ success: boolean; message: string }> {
-    const remote = await this.callRemoteGas('rejectRegistration', { regId, catatanAdmin });
+  async rejectRegistration(
+    regIdOrItem: string | PendingRegistration,
+    catatanAdmin: string,
+    adminUsername: string
+  ): Promise<{ success: boolean; message: string }> {
+    const targetId = typeof regIdOrItem === 'string' ? regIdOrItem : regIdOrItem.id;
+    const itemProvided = typeof regIdOrItem === 'object' ? regIdOrItem : undefined;
 
     const pendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
-    const reg = pendings.find(p => p.id === regId);
-    if (!reg) return { success: false, message: 'Data pendaftaran tidak ditemukan.' };
-    if (reg.status !== 'MENUNGGU_PERSETUJUAN') return { success: false, message: 'Pendaftaran ini sudah diproses.' };
+    let regIndex = pendings.findIndex(
+      p => String(p.id).trim() === String(targetId).trim() ||
+      (itemProvided && p.username.toLowerCase() === itemProvided.username.toLowerCase())
+    );
+
+    let reg: PendingRegistration;
+    if (regIndex >= 0) {
+      reg = { ...pendings[regIndex] };
+    } else if (itemProvided) {
+      reg = { ...itemProvided };
+      pendings.unshift(reg);
+      regIndex = 0;
+    } else {
+      return { success: false, message: 'Data pendaftaran tidak ditemukan.' };
+    }
+
+    if (reg.status !== 'MENUNGGU_PERSETUJUAN') {
+      return { success: false, message: 'Pendaftaran ini sudah diproses sebelumnya.' };
+    }
+
+    let remote: any = null;
+    try {
+      remote = await this.callRemoteGas('rejectRegistration', {
+        regId: reg.id,
+        targetUsername: reg.username,
+        catatanAdmin,
+        adminUsername: adminUsername || 'admin',
+        username: adminUsername || 'admin',
+      });
+    } catch (e) {
+      console.warn('Remote reject registration error:', e);
+    }
 
     reg.status = 'DITOLAK';
     reg.catatanAdmin = catatanAdmin;
     reg.diperiksaOleh = adminUsername;
     reg.tanggalPemeriksaan = new Date().toISOString();
 
+    pendings[regIndex] = reg;
     setStore('pendings', pendings);
     recordActivity(adminUsername, 'ADMIN', 'REJECT_REGISTRASI', 'REGISTRASI', `Menolak pendaftaran atlit ${reg.namaLengkap}: ${catatanAdmin}`);
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('ikspi_registrations_updated'));
     }
+
     return { success: true, message: remote?.message || 'Pendaftaran atlet berhasil ditolak.' };
   },
 
