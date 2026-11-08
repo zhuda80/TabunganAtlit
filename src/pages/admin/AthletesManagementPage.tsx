@@ -434,10 +434,9 @@ export const AthletesManagementPage: React.FC = () => {
                   <button
                     onClick={() => handleDeleteAthlete(ath)}
                     title={`Hapus Anggota ${ath.namaLengkap}`}
-                    className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                    className="p-1.5 rounded-lg text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Hapus</span>
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>

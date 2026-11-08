@@ -760,17 +760,25 @@ export const api = {
   },
 
   async deleteAthlete(athleteId: string): Promise<{ success: boolean; message: string }> {
-    let remote: any = null;
-    try {
-      remote = await this.callRemoteGas('deleteAthlete', { athleteId });
-    } catch (e) {
-      console.warn('Remote deleteAthlete notice:', e);
-    }
-
     const athletes = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
     const targetAth = athletes.find(a => a.id === athleteId);
     if (!targetAth) {
       return { success: false, message: 'Data atlet tidak ditemukan.' };
+    }
+
+    let remote: any = null;
+    try {
+      remote = await this.callRemoteGas('deleteAthlete', {
+        athleteId,
+        id: athleteId,
+        userId: targetAth.userId,
+        nomorInduk: targetAth.nomorInduk,
+        namaLengkap: targetAth.namaLengkap,
+        username: 'admin',
+        adminUsername: 'admin',
+      });
+    } catch (e) {
+      console.warn('Remote deleteAthlete notice:', e);
     }
 
     // Remove athlete from athletes store
@@ -801,9 +809,14 @@ export const api = {
       window.dispatchEvent(new Event('ikspi_transactions_updated'));
     }
 
+    let message = `Data atlet ${targetAth.namaLengkap} (${targetAth.nomorInduk}) berhasil dihapus permanen dari sistem.`;
+    if (remote && remote.success && remote.message) {
+      message = remote.message;
+    }
+
     return {
       success: true,
-      message: remote?.message || `Data atlet ${targetAth.namaLengkap} (${targetAth.nomorInduk}) berhasil dihapus permanen dari sistem.`,
+      message,
     };
   },
 
