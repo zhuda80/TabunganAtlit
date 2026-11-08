@@ -702,12 +702,27 @@ export const api = {
 
   // 4. ATHLETES MANAGEMENT
   async getAthletes(): Promise<AthleteProfile[]> {
+    const deletedIds = getStore<string[]>('deleted_athlete_ids', []);
     const remote = await this.callRemoteGas('getAthletes');
-    if (remote && remote.athletes && Array.isArray(remote.athletes) && remote.athletes.length > 0) {
-      setStore('athletes', remote.athletes);
-      return remote.athletes;
+    if (remote && remote.athletes && Array.isArray(remote.athletes)) {
+      const activeAthletes = remote.athletes.filter(
+        (a: AthleteProfile) =>
+          !deletedIds.includes(a.id) &&
+          !deletedIds.includes(a.userId) &&
+          !deletedIds.includes(a.nomorInduk) &&
+          (!a.nik || !deletedIds.includes(a.nik))
+      );
+      setStore('athletes', activeAthletes);
+      return activeAthletes;
     }
-    return getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
+    const local = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
+    return local.filter(
+      (a: AthleteProfile) =>
+        !deletedIds.includes(a.id) &&
+        !deletedIds.includes(a.userId) &&
+        !deletedIds.includes(a.nomorInduk) &&
+        (!a.nik || !deletedIds.includes(a.nik))
+    );
   },
 
   async updateAthlete(athleteId: string, updates: Partial<AthleteProfile>): Promise<{ success: boolean; message: string; athlete?: AthleteProfile }> {
@@ -761,16 +776,25 @@ export const api = {
 
   async deleteAthlete(athleteId: string): Promise<{ success: boolean; message: string }> {
     const athletes = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
-    const targetAth = athletes.find(a => a.id === athleteId);
+    const targetAth = athletes.find(a => a.id === athleteId || a.nomorInduk === athleteId || a.userId === athleteId);
     if (!targetAth) {
       return { success: false, message: 'Data atlet tidak ditemukan.' };
     }
 
+    // 1. Add to deleted_athlete_ids blacklist so remote getAthletes will NEVER restore it
+    const deletedIds = getStore<string[]>('deleted_athlete_ids', []);
+    if (!deletedIds.includes(targetAth.id)) deletedIds.push(targetAth.id);
+    if (targetAth.userId && !deletedIds.includes(targetAth.userId)) deletedIds.push(targetAth.userId);
+    if (targetAth.nomorInduk && !deletedIds.includes(targetAth.nomorInduk)) deletedIds.push(targetAth.nomorInduk);
+    if (targetAth.nik && !deletedIds.includes(targetAth.nik)) deletedIds.push(targetAth.nik);
+    setStore('deleted_athlete_ids', deletedIds);
+
+    // 2. Call remote GAS deleteAthlete
     let remote: any = null;
     try {
       remote = await this.callRemoteGas('deleteAthlete', {
-        athleteId,
-        id: athleteId,
+        athleteId: targetAth.id,
+        id: targetAth.id,
         userId: targetAth.userId,
         nomorInduk: targetAth.nomorInduk,
         namaLengkap: targetAth.namaLengkap,
@@ -781,21 +805,21 @@ export const api = {
       console.warn('Remote deleteAthlete notice:', e);
     }
 
-    // Remove athlete from athletes store
-    const updatedAthletes = athletes.filter(a => a.id !== athleteId);
+    // 3. Remove athlete from local athletes store
+    const updatedAthletes = athletes.filter(a => a.id !== targetAth.id && a.nomorInduk !== targetAth.nomorInduk && a.userId !== targetAth.userId);
     setStore('athletes', updatedAthletes);
 
-    // Remove user account from users store
+    // 4. Remove user account from users store
     const users = getStore<any[]>('users', SEED_USERS);
-    const updatedUsers = users.filter(u => u.userId !== targetAth.userId);
+    const updatedUsers = users.filter(u => u.userId !== targetAth.userId && u.username !== targetAth.userId);
     setStore('users', updatedUsers);
 
-    // Also remove any pending registrations matching this athlete
+    // 5. Remove any pending registrations matching this athlete
     const pendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
     const updatedPendings = pendings.filter(p => p.nomorInduk !== targetAth.nomorInduk && p.username !== targetAth.userId);
     setStore('pendings', updatedPendings);
 
-    // Record activity
+    // 6. Record activity
     recordActivity(
       'admin',
       'ADMIN',
@@ -809,9 +833,11 @@ export const api = {
       window.dispatchEvent(new Event('ikspi_transactions_updated'));
     }
 
-    let message = `Data atlet ${targetAth.namaLengkap} (${targetAth.nomorInduk}) berhasil dihapus permanen dari sistem.`;
+    let message = `Data atlet ${targetAth.namaLengkap} (${targetAth.nomorInduk}) berhasil dihapus permanen dari sistem!`;
     if (remote && remote.success && remote.message) {
       message = remote.message;
+    } else if (remote && !remote.success && remote.message && remote.message.includes('Unknown action')) {
+      message = `Data ${targetAth.namaLengkap} telah dihapus dari sistem! Agar baris di Google Spreadsheet juga otomatis terhapus, pastikan Anda telah meng-update kode GAS terbaru di menu Pengaturan Sistem (Deploy > New version).`;
     }
 
     return {

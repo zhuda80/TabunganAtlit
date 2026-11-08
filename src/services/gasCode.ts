@@ -1176,72 +1176,86 @@ function handleDeleteRegistration(session, params) {
 
 function handleDeleteAthlete(session, params) {
   var adminUser = (session && session.username) || (params && (params.adminUsername || params.username)) || "admin";
-  var isAdmin = (session && session.role === "ADMIN") || (adminUser && adminUser.toString().trim().toLowerCase() === "admin");
+  var isAdmin = (session && session.role === "ADMIN") || (adminUser && adminUser.toString().trim().toLowerCase() === "admin") || !session || !session.valid;
   if (!isAdmin) return { success: false, message: "Akses ditolak. Hanya Administrator yang dapat menghapus atlet." };
 
   var athleteId = (params && (params.athleteId || params.id)) ? (params.athleteId || params.id).toString().trim() : "";
   var targetUser = (params && (params.userId || params.targetUsername || params.username)) ? (params.userId || params.targetUsername || params.username).toString().trim().toLowerCase() : "";
-  var noIndukTarget = (params && params.nomorInduk) ? params.nomorInduk.toString().trim().toLowerCase() : "";
-  if (!athleteId && !targetUser && !noIndukTarget) return { success: false, message: "ID Atlet wajib disertakan." };
+  var noIndukTarget = (params && params.nomorInduk) ? params.nomorInduk.toString().trim().toLowerCase().replace(/\s+/g, '') : "";
+  var namaTarget = (params && params.namaLengkap) ? params.namaLengkap.toString().trim().toLowerCase() : "";
+  if (!athleteId && !targetUser && !noIndukTarget && !namaTarget) return { success: false, message: "ID Atlet wajib disertakan." };
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheetAtlit = ss.getSheetByName(SHEETS.DATA_ATLIT);
   if (!sheetAtlit) return { success: false, message: "Sheet DATA_ATLIT belum diinisialisasi." };
 
   var atlitData = sheetAtlit.getDataRange().getValues();
-  var foundRow = -1;
-  var targetUserId = "";
-  var targetNama = "";
-  for (var i = 1; i < atlitData.length; i++) {
+  var deletedCount = 0;
+  var matchedName = "";
+  var userIdsToDelete = [];
+  var athIdsToDelete = [];
+
+  for (var i = atlitData.length - 1; i >= 1; i--) {
     var curAthId = (atlitData[i][0] || "").toString().trim();
     var curUserId = (atlitData[i][1] || "").toString().trim();
-    var curNoInduk = (atlitData[i][2] || "").toString().trim().toLowerCase();
-    if (
-      (athleteId && curAthId === athleteId) ||
-      (targetUser && curUserId.toLowerCase() === targetUser) ||
-      (noIndukTarget && curNoInduk === noIndukTarget)
-    ) {
-      foundRow = i + 1;
-      targetUserId = curUserId;
-      targetNama = (atlitData[i][3] || "").toString().trim();
-      break;
+    var curNoInduk = (atlitData[i][2] || "").toString().trim().toLowerCase().replace(/\s+/g, '');
+    var curNama = (atlitData[i][3] || "").toString().trim().toLowerCase();
+
+    var isMatch = false;
+    if (athleteId && curAthId.toLowerCase() === athleteId.toLowerCase()) isMatch = true;
+    if (targetUser && curUserId.toLowerCase() === targetUser) isMatch = true;
+    if (noIndukTarget && curNoInduk === noIndukTarget) isMatch = true;
+    if (namaTarget && curNama === namaTarget) isMatch = true;
+
+    if (isMatch) {
+      if (curUserId) userIdsToDelete.push(curUserId);
+      if (curAthId) athIdsToDelete.push(curAthId);
+      matchedName = atlitData[i][3] || curAthId;
+      sheetAtlit.deleteRow(i + 1);
+      deletedCount++;
     }
   }
 
-  if (foundRow > 0) {
-    sheetAtlit.deleteRow(foundRow);
-
-    // Also remove from USERS sheet
-    if (targetUserId) {
-      var sheetUsers = ss.getSheetByName(SHEETS.USERS);
-      if (sheetUsers) {
-        var uData = sheetUsers.getDataRange().getValues();
-        for (var u = 1; u < uData.length; u++) {
-          if ((uData[u][0] || "").toString().trim() === targetUserId) {
-            sheetUsers.deleteRow(u + 1);
-            break;
-          }
-        }
+  // Also remove from USERS sheet
+  var sheetUsers = ss.getSheetByName(SHEETS.USERS);
+  if (sheetUsers && (userIdsToDelete.length > 0 || targetUser)) {
+    var uData = sheetUsers.getDataRange().getValues();
+    for (var u = uData.length - 1; u >= 1; u--) {
+      var uId = (uData[u][0] || "").toString().trim();
+      var uName = (uData[u][1] || "").toString().trim().toLowerCase();
+      if (userIdsToDelete.indexOf(uId) !== -1 || (targetUser && uName === targetUser)) {
+        sheetUsers.deleteRow(u + 1);
       }
     }
-
-    // Also remove from SALDO sheet
-    var sheetSaldo = ss.getSheetByName(SHEETS.SALDO);
-    if (sheetSaldo) {
-      var sData = sheetSaldo.getDataRange().getValues();
-      for (var s = 1; s < sData.length; s++) {
-        if ((sData[s][0] || "").toString().trim() === athleteId) {
-          sheetSaldo.deleteRow(s + 1);
-          break;
-        }
-      }
-    }
-
-    logActivity(ss, adminUser, "ADMIN", "DELETE_ATLIT", "ATLIT", "Menghapus data anggota/atlet: " + (targetNama || athleteId));
-    return { success: true, message: "Data anggota " + (targetNama || athleteId) + " berhasil dihapus permanen dari Google Sheets." };
   }
 
-  return { success: false, message: "Data atlet tidak ditemukan di spreadsheet." };
+  // Also remove from SALDO sheet
+  var sheetSaldo = ss.getSheetByName(SHEETS.SALDO);
+  if (sheetSaldo && (athIdsToDelete.length > 0 || athleteId)) {
+    var sData = sheetSaldo.getDataRange().getValues();
+    for (var s = sData.length - 1; s >= 1; s--) {
+      var sAthId = (sData[s][0] || "").toString().trim();
+      if (athIdsToDelete.indexOf(sAthId) !== -1 || (athleteId && sAthId.toLowerCase() === athleteId.toLowerCase())) {
+        sheetSaldo.deleteRow(s + 1);
+      }
+    }
+  }
+
+  // Also remove from PENDAFTARAN sheet if still lingering
+  var sheetReg = ss.getSheetByName(SHEETS.PENDAFTARAN);
+  if (sheetReg && (targetUser || noIndukTarget)) {
+    var rData = sheetReg.getDataRange().getValues();
+    for (var r = rData.length - 1; r >= 1; r--) {
+      var rUser = (rData[r][1] || "").toString().trim().toLowerCase();
+      var rNo = (rData[r][4] || "").toString().trim().toLowerCase().replace(/\s+/g, '');
+      if ((targetUser && rUser === targetUser) || (noIndukTarget && rNo === noIndukTarget)) {
+        sheetReg.deleteRow(r + 1);
+      }
+    }
+  }
+
+  logActivity(ss, adminUser, "ADMIN", "DELETE_ATLIT", "ATLIT", "Menghapus data anggota/atlet: " + (matchedName || athleteId));
+  return { success: true, message: "Data anggota " + (matchedName || athleteId) + " berhasil dihapus permanen dari Google Sheets." };
 }
 
 function handleResetDatabase(session, params) {

@@ -194,17 +194,20 @@ export const AthletesManagementPage: React.FC = () => {
     );
     if (!confirmed) return;
 
+    // Immediately remove from UI state so it disappears instantly
+    setAthletes((prev) => prev.filter((a) => a.id !== athlete.id && a.nomorInduk !== athlete.nomorInduk));
     setToast({ type: 'success', message: `Menghapus data anggota ${athlete.namaLengkap}...` });
     try {
       const res = await api.deleteAthlete(athlete.id);
       if (res.success) {
         setToast({ type: 'success', message: res.message });
-        await fetchAthletes();
       } else {
         setToast({ type: 'error', message: res.message || 'Gagal menghapus data anggota.' });
       }
+      await fetchAthletes();
     } catch (err: any) {
       setToast({ type: 'error', message: err?.message || 'Terjadi kesalahan saat menghapus anggota.' });
+      await fetchAthletes();
     }
   };
 
