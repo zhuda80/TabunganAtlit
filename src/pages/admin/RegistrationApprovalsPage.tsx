@@ -16,6 +16,7 @@ import {
   Shield,
   Eye,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 
 export const RegistrationApprovalsPage: React.FC = () => {
@@ -32,7 +33,9 @@ export const RegistrationApprovalsPage: React.FC = () => {
     setLoading(true);
     try {
       const data = await api.getPendingRegistrations();
-      setRegistrations(data);
+      // Only show applications that are pending approval
+      const pendingOnly = (data || []).filter((r) => r.status === 'MENUNGGU_PERSETUJUAN');
+      setRegistrations(pendingOnly);
     } catch (err) {
       console.error(err);
     } finally {
@@ -78,6 +81,23 @@ export const RegistrationApprovalsPage: React.FC = () => {
       setToast({ type: 'error', message: err.message || 'Gagal memproses pendaftaran.' });
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleDeleteApplicant = async (item: PendingRegistration) => {
+    if (!window.confirm(`Yakin ingin menghapus data permohonan pendaftaran calon atlit "${item.namaLengkap}"? Data akan dibersihkan permanen.`)) {
+      return;
+    }
+    try {
+      const res = await api.deleteRegistration(item, item.username);
+      if (res.success) {
+        setToast({ type: 'success', message: res.message });
+        await fetchRegistrations();
+      } else {
+        setToast({ type: 'error', message: res.message });
+      }
+    } catch (err: any) {
+      setToast({ type: 'error', message: err.message || 'Gagal menghapus data pendaftar.' });
     }
   };
 
@@ -208,7 +228,15 @@ export const RegistrationApprovalsPage: React.FC = () => {
 
                 {/* Actions */}
                 {isPending && (
-                  <div className="flex items-center gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-slate-800">
+                  <div className="flex flex-wrap items-center gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-slate-800">
+                    <button
+                      onClick={() => handleDeleteApplicant(item)}
+                      title="Hapus data pendaftaran"
+                      className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
+                    </button>
                     <button
                       onClick={() => {
                         setActionItem({ item, action: 'REJECT' });
@@ -217,7 +245,7 @@ export const RegistrationApprovalsPage: React.FC = () => {
                       className="px-3.5 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
-                      <span>Tolak</span>
+                      <span>Tolak & Bersihkan</span>
                     </button>
                     <button
                       onClick={() => {
@@ -241,15 +269,15 @@ export const RegistrationApprovalsPage: React.FC = () => {
       <Modal
         isOpen={!!actionItem}
         onClose={() => setActionItem(null)}
-        title={actionItem?.action === 'APPROVE' ? 'Verifikasi & Aktifkan Akun Atlit' : 'Tolak Pendaftaran Atlit'}
+        title={actionItem?.action === 'APPROVE' ? 'Verifikasi & Aktifkan Akun Atlit' : 'Tolak & Hapus Pendaftaran Atlit'}
         subtitle={`Atlit: ${actionItem?.item.namaLengkap} (${actionItem?.item.unitRanting})`}
         maxWidth="md"
       >
         <div className="space-y-4">
           <p className="text-xs text-slate-300">
             {actionItem?.action === 'APPROVE'
-              ? 'Setelah disetujui, akun atlit ini akan aktif di database perguruan, mendapatkan buku tabungan digital, dan dapat login.'
-              : 'Pendaftaran ini akan ditolak. Atlet tidak akan dapat login.'}
+              ? 'Setelah disetujui, akun atlit ini akan aktif di database perguruan, mendapatkan buku tabungan digital, dan data pendaftar otomatis dipindahkan/dibersihkan dari antrean verifikasi ini.'
+              : 'Pendaftaran ini akan ditolak dan data peserta pendaftaran akan otomatis dihapus/dibersihkan dari sistem.'}
           </p>
 
           <div>

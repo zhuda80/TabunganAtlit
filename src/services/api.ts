@@ -717,16 +717,17 @@ export const api = {
   },
 
   async updateAthlete(athleteId: string, updates: Partial<AthleteProfile>): Promise<{ success: boolean; message: string; athlete?: AthleteProfile }> {
-    const remote = await this.callRemoteGas('updateAthlete', { athleteId, ...updates });
-    if (remote && remote.success && !remote.fallbackToLocal) {
-      // In remote mode, also update local cache
-    }
+    const remote = await this.callRemoteGas('updateAthlete', {
+      athleteId,
+      ...updates,
+      status: updates.status,
+    });
 
     const athletes = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
     const idx = athletes.findIndex(a => a.id === athleteId);
     if (idx === -1) return { success: false, message: 'Data atlet tidak ditemukan.' };
 
-    const updatedAthlete = {
+    const updatedAthlete: AthleteProfile = {
       ...athletes[idx],
       ...updates,
       updatedAt: new Date().toISOString(),
@@ -734,25 +735,34 @@ export const api = {
     athletes[idx] = updatedAthlete;
     setStore('athletes', athletes);
 
-    // If full name changed, also update user record if found
-    if (updates.namaLengkap) {
-      const users = getStore<any[]>('users', SEED_USERS);
-      const userIdx = users.findIndex(u => u.userId === updatedAthlete.userId);
-      if (userIdx !== -1) {
-        users[userIdx].namaLengkap = updates.namaLengkap;
-        setStore('users', users);
-      }
+    // If status or name changed, also update user record in users store
+    const users = getStore<any[]>('users', SEED_USERS);
+    const userIdx = users.findIndex(u => u.userId === updatedAthlete.userId);
+    if (userIdx !== -1) {
+      if (updates.namaLengkap) users[userIdx].namaLengkap = updates.namaLengkap;
+      if (updates.status) users[userIdx].status = updates.status;
+      setStore('users', users);
     }
 
     recordActivity(
       updatedAthlete.namaLengkap,
+      'ADMIN',
+      updates.status ? 'UPDATE_STATUS_ATLIT' : 'UPDATE_PROFIL',
       'ATLIT',
-      'UPDATE_PROFIL',
-      'ATLIT',
-      `Pembaruan identitas atlet: ${updatedAthlete.namaLengkap} (${updatedAthlete.nomorInduk})`
+      updates.status
+        ? `Mengubah status atlet ${updatedAthlete.namaLengkap} (${updatedAthlete.nomorInduk}) menjadi ${updatedAthlete.status}`
+        : `Pembaruan identitas atlet: ${updatedAthlete.namaLengkap} (${updatedAthlete.nomorInduk})`
     );
 
-    return { success: true, message: 'Data identitas atlet berhasil diperbarui!', athlete: updatedAthlete };
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_athletes_updated'));
+    }
+
+    return {
+      success: true,
+      message: remote?.message || (updates.status ? `Status atlet ${updatedAthlete.namaLengkap} berhasil diubah menjadi ${updatedAthlete.status === 'AKTIF' ? 'Aktif' : 'Nonaktif'}.` : 'Data identitas atlet berhasil diperbarui!'),
+      athlete: updatedAthlete
+    };
   },
 
   async addAthleteManual(data: Omit<AthleteProfile, 'id' | 'createdAt' | 'updatedAt' | 'saldoSaatIni' | 'totalSetoran' | 'totalPenarikan'>, password: string): Promise<{ success: boolean; message: string }> {
@@ -794,14 +804,15 @@ export const api = {
   // 5. REGISTRATION APPROVALS
   async getPendingRegistrations(): Promise<PendingRegistration[]> {
     const localPendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
-    const merged = [...localPendings];
+    let merged = localPendings.filter(p => !p.status || p.status === 'MENUNGGU_PERSETUJUAN');
 
     try {
       const remote = await this.callRemoteGas('getPendingRegistrations');
       if (remote && Array.isArray(remote.registrations)) {
         for (const r of remote.registrations) {
+          if (r.status && r.status !== 'MENUNGGU_PERSETUJUAN') continue;
           const existingIdx = merged.findIndex(
-            p => p.id === r.id || (p.username.toLowerCase() === (r.username || '').toLowerCase() && p.status === 'MENUNGGU_PERSETUJUAN')
+            p => p.id === r.id || (p.username.toLowerCase() === (r.username || '').toLowerCase())
           );
           const normalized: PendingRegistration = {
             id: r.id,
@@ -819,7 +830,7 @@ export const api = {
             unitRanting: r.unitRanting || '',
             fotoUrl: r.fotoUrl,
             tanggalDaftar: r.tanggalDaftar || r.tanggalPengajuan || r.createdAt || new Date().toISOString(),
-            status: r.status || 'MENUNGGU_PERSETUJUAN',
+            status: 'MENUNGGU_PERSETUJUAN',
             catatanAdmin: r.catatanAdmin,
             diperiksaOleh: r.diperiksaOleh,
             tanggalPemeriksaan: r.tanggalPemeriksaan,
@@ -831,11 +842,13 @@ export const api = {
             merged.unshift(normalized);
           }
         }
-        setStore('pendings', merged);
       }
     } catch (e) {
       console.warn('Failed to fetch remote pending registrations:', e);
     }
+
+    merged = merged.filter(p => !p.status || p.status === 'MENUNGGU_PERSETUJUAN');
+    setStore('pendings', merged);
 
     return merged.sort(
       (a, b) => new Date(b.tanggalDaftar || 0).getTime() - new Date(a.tanggalDaftar || 0).getTime()
@@ -925,17 +938,16 @@ export const api = {
       createdAt: new Date().toISOString(),
     };
 
-    reg.status = 'DISETUJUI';
-    reg.catatanAdmin = catatanAdmin;
-    reg.diperiksaOleh = adminUsername;
-    reg.tanggalPemeriksaan = new Date().toISOString();
-
-    pendings[regIndex] = reg;
-    setStore('pendings', pendings);
+    // Delete applicant from pending list after approval
+    const updatedPendings = pendings.filter(
+      p => String(p.id).trim() !== String(reg.id).trim() &&
+           p.username.toLowerCase() !== reg.username.toLowerCase()
+    );
+    setStore('pendings', updatedPendings);
     setStore('athletes', [...athletes.filter(a => a.id !== newAthlete.id && a.nomorInduk !== newAthlete.nomorInduk), newAthlete]);
     setStore('users', [...users.filter(u => u.username.toLowerCase() !== newUser.username.toLowerCase()), newUser]);
 
-    recordActivity(adminUsername, 'ADMIN', 'APPROVE_REGISTRASI', 'REGISTRASI', `Menyetujui pendaftaran atlit ${reg.namaLengkap} (${reg.unitRanting})`);
+    recordActivity(adminUsername, 'ADMIN', 'APPROVE_REGISTRASI', 'REGISTRASI', `Menyetujui pendaftaran & mengaktifkan atlit ${reg.namaLengkap} (${reg.unitRanting})`);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('ikspi_registrations_updated'));
@@ -944,7 +956,7 @@ export const api = {
 
     return {
       success: true,
-      message: remote?.message || `Pendaftaran atlet ${reg.namaLengkap} berhasil disetujui! Akun sekarang aktif dan dapat login.`,
+      message: remote?.message || `Pendaftaran atlet ${reg.namaLengkap} berhasil disetujui! Akun sekarang aktif dan data pendaftar dipindahkan ke data atlet aktif.`,
     };
   },
 
@@ -990,20 +1002,56 @@ export const api = {
       console.warn('Remote reject registration error:', e);
     }
 
-    reg.status = 'DITOLAK';
-    reg.catatanAdmin = catatanAdmin;
-    reg.diperiksaOleh = adminUsername;
-    reg.tanggalPemeriksaan = new Date().toISOString();
-
-    pendings[regIndex] = reg;
-    setStore('pendings', pendings);
-    recordActivity(adminUsername, 'ADMIN', 'REJECT_REGISTRASI', 'REGISTRASI', `Menolak pendaftaran atlit ${reg.namaLengkap}: ${catatanAdmin}`);
+    // Delete applicant from pending list after rejection
+    const updatedPendings = pendings.filter(
+      p => String(p.id).trim() !== String(reg.id).trim() &&
+           p.username.toLowerCase() !== reg.username.toLowerCase()
+    );
+    setStore('pendings', updatedPendings);
+    recordActivity(adminUsername, 'ADMIN', 'REJECT_REGISTRASI', 'REGISTRASI', `Menolak & menghapus pendaftaran atlit ${reg.namaLengkap}: ${catatanAdmin}`);
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('ikspi_registrations_updated'));
     }
 
-    return { success: true, message: remote?.message || 'Pendaftaran atlet berhasil ditolak.' };
+    return {
+      success: true,
+      message: remote?.message || `Pendaftaran atlet ${reg.namaLengkap} ditolak dan data pendaftar telah dibersihkan.`,
+    };
+  },
+
+  async deleteRegistration(
+    regIdOrItem: string | PendingRegistration,
+    username?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const targetId = typeof regIdOrItem === 'string' ? regIdOrItem : regIdOrItem.id;
+    const targetUsername = typeof regIdOrItem === 'object' ? regIdOrItem.username : username;
+
+    let remote: any = null;
+    try {
+      remote = await this.callRemoteGas('deleteRegistration', {
+        regId: targetId,
+        username: targetUsername,
+      });
+    } catch (e) {
+      console.warn('Remote delete registration error:', e);
+    }
+
+    const pendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
+    const updated = pendings.filter(
+      p => String(p.id).trim() !== String(targetId).trim() &&
+           (!targetUsername || p.username.toLowerCase() !== targetUsername.toLowerCase())
+    );
+    setStore('pendings', updated);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_registrations_updated'));
+    }
+
+    return {
+      success: true,
+      message: remote?.message || 'Data pendaftar berhasil dihapus dari sistem.',
+    };
   },
 
   // 6. DEPOSITS
@@ -1875,13 +1923,14 @@ export const api = {
       try {
         const remotePendings = await this.callRemoteGas('getPendingRegistrations');
         if (remotePendings && Array.isArray(remotePendings.registrations)) {
-          const merged = [...pendings];
-          for (const rp of remotePendings.registrations) {
-            if (!merged.some(m => m.id === rp.id || (m.username.toLowerCase() === (rp.username || '').toLowerCase() && m.status === 'MENUNGGU_PERSETUJUAN'))) {
+          const onlyPending = remotePendings.registrations.filter((rp: any) => !rp.status || rp.status === 'MENUNGGU_PERSETUJUAN');
+          const merged = pendings.filter(p => !p.status || p.status === 'MENUNGGU_PERSETUJUAN');
+          for (const rp of onlyPending) {
+            if (!merged.some(m => m.id === rp.id || (m.username.toLowerCase() === (rp.username || '').toLowerCase()))) {
               merged.push({
                 ...rp,
                 tanggalDaftar: rp.tanggalDaftar || rp.tanggalPengajuan || new Date().toISOString(),
-                status: rp.status || 'MENUNGGU_PERSETUJUAN',
+                status: 'MENUNGGU_PERSETUJUAN',
               });
             }
           }

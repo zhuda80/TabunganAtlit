@@ -102,6 +102,11 @@ function handleRequest(e) {
       output = handleRejectRegistration(sessionReject, params);
       return jsonResponse(output);
     }
+    if (action === "deleteRegistration") {
+      var sessionDelete = verifyToken(params.token, params);
+      output = handleDeleteRegistration(sessionDelete, params);
+      return jsonResponse(output);
+    }
     if (action === "resetDefaultAdmin") {
       var ssAdmin = SpreadsheetApp.getActiveSpreadsheet();
       var sheetUsersAdmin = ssAdmin.getSheetByName(SHEETS.USERS);
@@ -1049,16 +1054,13 @@ function handleApproveRegistration(session, params) {
       sheetSaldo.appendRow([athleteId, 0, 0, 0, now]);
     }
 
-    // 4. Update Registration status
-    sheetReg.getRange(foundRowIndex + 1, 13).setValue("DISETUJUI");
-    sheetReg.getRange(foundRowIndex + 1, 14).setValue(catatan);
-    sheetReg.getRange(foundRowIndex + 1, 15).setValue(adminUser);
-    sheetReg.getRange(foundRowIndex + 1, 17).setValue(now);
+    // 4. Delete registration applicant from PENDAFTARAN so it no longer lingers in the pending queue
+    sheetReg.deleteRow(foundRowIndex + 1);
 
-    logActivity(ss, adminUser, "ADMIN", "APPROVE_REGISTRASI", "REGISTRASI", "Menyetujui pendaftaran atlit: " + namaLengkap + " (" + unitRanting + ")");
+    logActivity(ss, adminUser, "ADMIN", "APPROVE_REGISTRASI", "REGISTRASI", "Menyetujui pendaftaran & mengaktifkan atlit: " + namaLengkap + " (" + unitRanting + ")");
     return {
       success: true,
-      message: "Pendaftaran atlet " + namaLengkap + " berhasil diverifikasi dan disetujui! Akun sekarang aktif.",
+      message: "Pendaftaran atlet " + namaLengkap + " berhasil disetujui & data pendaftar dipindahkan ke data atlet aktif!",
       athleteId: athleteId,
       userId: userId
     };
@@ -1067,20 +1069,12 @@ function handleApproveRegistration(session, params) {
   // If not found in sheetReg but passed from frontend payload (bootstrap fallback)
   if (params && params.registration) {
     var regObj = params.registration;
-    var newRegId = regId || ("REG-" + new Date().getTime());
     var regUser = (regObj.username || targetUsername || "").trim();
     var regNama = (regObj.namaLengkap || regUser).trim();
     var regPass = regObj.password ? hashPassword(regObj.password, "saltReg") : hashPassword("atlit123", "saltReg");
     var regNoInduk = regObj.nomorInduk || "-";
     var newUserId = "USR-" + new Date().getTime();
     var newAthleteId = "ATL-" + new Date().getTime();
-
-    sheetReg.appendRow([
-      newRegId, regUser, regPass, "saltReg", regNoInduk, regNama,
-      regObj.tempatLahir || "", regObj.tanggalLahir || "", regObj.alamat || "",
-      regObj.nomorWhatsApp || "", regObj.unitRanting || "", regObj.fotoUrl || "",
-      "DISETUJUI", catatan, adminUser, now, now
-    ]);
 
     sheetUsers.appendRow([newUserId, regUser, regPass, "saltReg", "ATLIT", "AKTIF", now, "", "", ""]);
     sheetAtlit.appendRow([
@@ -1122,20 +1116,46 @@ function handleRejectRegistration(session, params) {
     var curId = (regData[i][0] || "").toString().trim();
     var curUser = (regData[i][1] || "").toString().trim().toLowerCase();
     if ((regId && curId === regId) || (targetUsername && curUser === targetUsername)) {
-      if (regData[i][12] !== "MENUNGGU_PERSETUJUAN") {
-        return { success: false, message: "Pendaftaran sudah diproses sebelumnya." };
-      }
-      sheetReg.getRange(i + 1, 13).setValue("DITOLAK");
-      sheetReg.getRange(i + 1, 14).setValue(catatan);
-      sheetReg.getRange(i + 1, 15).setValue(adminUser);
-      sheetReg.getRange(i + 1, 17).setValue(new Date().toISOString());
+      var applicantName = regData[i][5] || curUser;
+      // Delete applicant row completely after rejection
+      sheetReg.deleteRow(i + 1);
 
-      logActivity(ss, adminUser, "ADMIN", "REJECT_REGISTRASI", "REGISTRASI", "Menolak pendaftaran: " + (regData[i][5] || curUser));
-      return { success: true, message: "Pendaftaran atlit telah ditolak." };
+      logActivity(ss, adminUser, "ADMIN", "REJECT_REGISTRASI", "REGISTRASI", "Menolak dan menghapus data pendaftaran atlit: " + applicantName + " (" + catatan + ")");
+      return { success: true, message: "Pendaftaran atlet " + applicantName + " telah ditolak dan data pendaftar berhasil dihapus." };
     }
   }
 
-  return { success: false, message: "Pendaftaran tidak ditemukan." };
+  return { success: false, message: "Data pendaftaran tidak ditemukan." };
+}
+
+function handleDeleteRegistration(session, params) {
+  var adminUser = (session && session.username) || (params && (params.adminUsername || params.username)) || "admin";
+  var isAdmin = (session && session.role === "ADMIN") || (adminUser && adminUser.toString().trim().toLowerCase() === "admin");
+  if (!isAdmin) return { success: false, message: "Akses ditolak." };
+
+  var regId = (params && params.regId) ? params.regId.toString().trim() : "";
+  var targetUsername = (params && params.username) ? params.username.toString().trim().toLowerCase() : "";
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetReg = getOrCreateSheet(ss, SHEETS.PENDAFTARAN, [
+    "REG_ID", "USERNAME", "PASSWORD_HASH", "SALT", "NOMOR_INDUK", "NAMA_LENGKAP", "TEMPAT_LAHIR",
+    "TANGGAL_LAHIR", "ALAMAT", "NOMOR_WA", "UNIT_RANTING", "FOTO_URL", "STATUS", "CATATAN_ADMIN",
+    "DIPERIKSA_OLEH", "TANGGAL_DAFTAR", "TANGGAL_PERIKSA"
+  ]);
+
+  var regData = sheetReg.getDataRange().getValues();
+  for (var i = 1; i < regData.length; i++) {
+    var curId = (regData[i][0] || "").toString().trim();
+    var curUser = (regData[i][1] || "").toString().trim().toLowerCase();
+    if ((regId && curId === regId) || (targetUsername && curUser === targetUsername)) {
+      var applicantName = regData[i][5] || curUser;
+      sheetReg.deleteRow(i + 1);
+      logActivity(ss, adminUser, "ADMIN", "DELETE_REGISTRASI", "REGISTRASI", "Menghapus data permohonan pendaftaran: " + applicantName);
+      return { success: true, message: "Data permohonan pendaftaran " + applicantName + " berhasil dihapus dari Google Sheets." };
+    }
+  }
+
+  return { success: true, message: "Data pendaftaran sudah tidak ada di Google Sheets." };
 }
 
 // ================= MUTATION & BALANCE HELPERS =================
@@ -1524,10 +1544,26 @@ function handleUpdateAthlete(session, params) {
     if (params.nomorWhatsApp !== undefined) sheetAtlit.getRange(foundIndex, 8).setValue(params.nomorWhatsApp);
     if (params.unitRanting !== undefined) sheetAtlit.getRange(foundIndex, 9).setValue(params.unitRanting);
     if (params.fotoUrl !== undefined) sheetAtlit.getRange(foundIndex, 10).setValue(params.fotoUrl);
+    if (params.status !== undefined) {
+      sheetAtlit.getRange(foundIndex, 11).setValue(params.status);
+      var targetUid = data[foundIndex - 1][1];
+      if (targetUid) {
+        var sheetUsersUpdate = getOrCreateSheet(ss, SHEETS.USERS, [
+          "USER_ID", "USERNAME", "PASSWORD_HASH", "SALT", "ROLE", "STATUS", "CREATED_AT", "LAST_LOGIN", "SESSION_TOKEN", "TOKEN_EXPIRES"
+        ]);
+        var uDataUpdate = sheetUsersUpdate.getDataRange().getValues();
+        for (var u = 1; u < uDataUpdate.length; u++) {
+          if (uDataUpdate[u][0] === targetUid) {
+            sheetUsersUpdate.getRange(u + 1, 6).setValue(params.status);
+            break;
+          }
+        }
+      }
+    }
     sheetAtlit.getRange(foundIndex, 13).setValue(new Date().toISOString());
 
-    logActivity(ss, session.username || "User", session.role || "ATLIT", "UPDATE_ATLIT", "ATLIT", "Memperbarui identitas atlit di spreadsheet: " + (params.namaLengkap || data[foundIndex - 1][3]));
-    return { success: true, message: "Identitas atlit berhasil diperbarui di Google Sheets!" };
+    logActivity(ss, session.username || "Admin", session.role || "ADMIN", "UPDATE_ATLIT", "ATLIT", "Memperbarui status/identitas atlit di spreadsheet: " + (params.namaLengkap || data[foundIndex - 1][3]) + " (Status: " + (params.status || data[foundIndex - 1][10] || "AKTIF") + ")");
+    return { success: true, message: "Status dan identitas atlit berhasil diperbarui di Google Sheets!" };
   }
 
   return { success: false, message: "Data atlit tidak ditemukan di spreadsheet." };
@@ -1730,7 +1766,7 @@ function handleGetAthletes(session, params) {
       nomorWhatsApp: row[7],
       unitRanting: row[8],
       fotoUrl: row[9],
-      status: row[10],
+      status: row[10] || "AKTIF",
       createdAt: row[11],
       updatedAt: row[12],
       saldoSaatIni: sal.saldoSaatIni,
@@ -1826,6 +1862,9 @@ function handleGetPendingRegistrations(session, params) {
   for (var i = 1; i < data.length; i++) {
     var row = data[i];
     if (!row[0]) continue;
+    var rowStatus = (row[12] || "MENUNGGU_PERSETUJUAN").toString().trim();
+    if (rowStatus !== "MENUNGGU_PERSETUJUAN") continue;
+
     var noInduk = (row[4] || "").toString();
     var angkatan = "";
     var niw = "";

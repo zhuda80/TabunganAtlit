@@ -25,6 +25,7 @@ export const AthletesManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRanting, setSelectedRanting] = useState('ALL');
+  const [selectedStatus, setSelectedStatus] = useState<'ALL' | 'AKTIF' | 'NONAKTIF'>('ALL');
 
   // Add athlete modal
   const [isAddOpen, setIsAddOpen] = useState(false);
@@ -64,6 +65,11 @@ export const AthletesManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchAthletes();
+    const handleUpdate = () => fetchAthletes();
+    window.addEventListener('ikspi_athletes_updated', handleUpdate);
+    return () => {
+      window.removeEventListener('ikspi_athletes_updated', handleUpdate);
+    };
   }, []);
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -162,10 +168,22 @@ export const AthletesManagementPage: React.FC = () => {
 
   const toggleStatus = async (athlete: AthleteProfile) => {
     const nextStatus = athlete.status === 'AKTIF' ? 'NONAKTIF' : 'AKTIF';
-    const res = await api.updateAthlete(athlete.id, { status: nextStatus });
-    if (res.success) {
-      setToast({ type: 'success', message: `Status atlet diubah menjadi ${nextStatus}` });
-      await fetchAthletes();
+    const confirmed = window.confirm(
+      `Apakah Anda yakin ingin mengubah status ${athlete.namaLengkap} menjadi ${nextStatus}?`
+    );
+    if (!confirmed) return;
+
+    setToast({ type: 'success', message: `Memperbarui status ${athlete.namaLengkap}...` });
+    try {
+      const res = await api.updateAthlete(athlete.id, { status: nextStatus });
+      if (res.success) {
+        setToast({ type: 'success', message: `Status ${athlete.namaLengkap} berhasil diubah menjadi ${nextStatus}` });
+        await fetchAthletes();
+      } else {
+        setToast({ type: 'error', message: res.message || 'Gagal mengubah status atlet' });
+      }
+    } catch (err: any) {
+      setToast({ type: 'error', message: err.message || 'Terjadi kesalahan saat mengubah status' });
     }
   };
 
@@ -189,7 +207,8 @@ export const AthletesManagementPage: React.FC = () => {
       (a.niw && a.niw.toLowerCase().includes(q)) ||
       (a.unitRanting && a.unitRanting.toLowerCase().includes(q));
     const matchRanting = selectedRanting === 'ALL' || a.unitRanting === selectedRanting;
-    return matchSearch && matchRanting;
+    const matchStatus = selectedStatus === 'ALL' || a.status === selectedStatus;
+    return matchSearch && matchRanting && matchStatus;
   });
 
   return (
@@ -262,14 +281,24 @@ export const AthletesManagementPage: React.FC = () => {
         <select
           value={selectedRanting}
           onChange={(e) => setSelectedRanting(e.target.value)}
-          className="w-full sm:w-64 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-amber-400"
+          className="w-full sm:w-56 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-amber-400"
         >
-          <option value="ALL">Semua Unit / Ranting Latihan</option>
+          <option value="ALL">Semua Unit / Ranting</option>
           {distinctRantings.map((r) => (
             <option key={r} value={r}>
               {r}
             </option>
           ))}
+        </select>
+
+        <select
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value as 'ALL' | 'AKTIF' | 'NONAKTIF')}
+          className="w-full sm:w-44 px-3 py-2 bg-slate-950 border border-slate-700/80 rounded-xl text-xs text-white focus:outline-none focus:border-amber-400"
+        >
+          <option value="ALL">Semua Status</option>
+          <option value="AKTIF">🟢 Hanya Aktif</option>
+          <option value="NONAKTIF">🔴 Hanya Nonaktif</option>
         </select>
       </div>
 
@@ -296,10 +325,15 @@ export const AthletesManagementPage: React.FC = () => {
                     </div>
                   </div>
 
-                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold ${badge.bg}`}>
+                  <button
+                    type="button"
+                    onClick={() => toggleStatus(ath)}
+                    title={`Klik untuk ubah status ${ath.namaLengkap} (Saat ini: ${ath.status})`}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold transition hover:opacity-80 cursor-pointer ${badge.bg}`}
+                  >
                     <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
-                    {badge.label}
-                  </span>
+                    <span>{badge.label}</span>
+                  </button>
                 </div>
 
                 <div className="mt-3 p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
@@ -649,6 +683,18 @@ export const AthletesManagementPage: React.FC = () => {
                 onChange={(e) => setEditingAthlete({ ...editingAthlete, nomorWhatsApp: e.target.value })}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-400"
               />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Status Keanggotaan</label>
+              <select
+                value={editingAthlete.status || 'AKTIF'}
+                onChange={(e) => setEditingAthlete({ ...editingAthlete, status: e.target.value as 'AKTIF' | 'NONAKTIF' })}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-400"
+              >
+                <option value="AKTIF">🟢 AKTIF (Akun normal & bisa login)</option>
+                <option value="NONAKTIF">🔴 NONAKTIF (Akun dibekukan / dinonaktifkan)</option>
+              </select>
             </div>
 
             <div>
