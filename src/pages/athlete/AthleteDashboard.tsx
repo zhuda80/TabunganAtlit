@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SavingsGrowthChart } from '../../components/common/SavingsGrowthChart';
+import { PWAInstallButton } from '../../components/common/PWAInstallButton';
 
 export const AthleteDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -67,6 +68,9 @@ export const AthleteDashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Android Mobile PWA Quick Install Banner */}
+      <PWAInstallButton variant="banner" />
+
       {/* Top Banner Card */}
       <div className="rounded-3xl bg-gradient-to-r from-slate-900 via-blue-950/50 to-slate-900 border border-slate-800 p-6 md:p-8 relative overflow-hidden shadow-2xl">
         <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-radial from-amber-500/10 via-amber-600/5 to-transparent pointer-events-none"></div>

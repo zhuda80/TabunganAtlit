@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { IksPiLogo } from '../../components/common/IksPiLogo';
+import { PWAInstallButton } from '../../components/common/PWAInstallButton';
 import { Lock, User, Eye, EyeOff, ShieldAlert, CheckCircle2, ArrowRight, HelpCircle, Phone, MessageSquare } from 'lucide-react';
 import { Modal } from '../../components/ui/Modal';
 
@@ -161,6 +162,11 @@ export const LoginPage: React.FC = () => {
                 Daftar Atlit Baru
               </Link>
             </p>
+          </div>
+
+          {/* Android Mobile Install Link */}
+          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-center">
+            <PWAInstallButton variant="minimal" />
           </div>
         </div>
 

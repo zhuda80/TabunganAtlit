@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { IksPiLogo } from '../common/IksPiLogo';
+import { PWAInstallButton } from '../common/PWAInstallButton';
 import { LogOut, User, Bell, ShieldCheck, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -33,7 +34,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onToggleSidebar }) => {
         </div>
 
         {/* Right: User pill & actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* In-App Android / Mobile Install button */}
+          <PWAInstallButton variant="navbar" />
           {/* Role badge */}
           <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800 border border-slate-700 text-xs">
             {user?.role === 'ADMIN' ? (

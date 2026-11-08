@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B"/>
+      <stop offset="100%" stop-color="#090D16"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#F59E0B" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="512" height="512" rx="104" fill="url(#bgGrad)"/>
+
+  <!-- Outer Golden Border -->
+  <rect x="16" y="16" width="480" height="480" rx="92" fill="none" stroke="url(#goldGrad)" stroke-width="8" stroke-opacity="0.6"/>
+
+  <!-- Main Shield Shape with Glow -->
+  <g filter="url(#shadow)">
+    <!-- Octagon / Shield -->
+    <path d="M 256 64 L 416 128 L 416 320 L 256 448 L 96 320 L 96 128 Z" 
+          fill="url(#shieldGrad)" 
+          stroke="url(#goldGrad)" 
+          stroke-width="12" 
+          stroke-linejoin="round"/>
+    
+    <!-- Inner Octagon Line -->
+    <path d="M 256 86 L 396 142 L 396 308 L 256 422 L 116 308 L 116 142 Z" 
+          fill="none" 
+          stroke="#F59E0B" 
+          stroke-width="3" 
+          stroke-dasharray="8 6" 
+          stroke-opacity="0.5"/>
+  </g>
+
+  <!-- Top Star -->
+  <polygon points="256,104 266,128 292,129 271,145 279,170 256,154 233,170 241,145 220,129 246,128" fill="url(#goldGrad)"/>
+
+  <!-- Yin Yang Central Emblem -->
+  <g transform="translate(256, 252)">
+    <!-- Circle Outer Ring -->
+    <circle r="72" fill="#020617" stroke="url(#goldGrad)" stroke-width="6"/>
+    
+    <!-- White / Gold Half -->
+    <path d="M 0 -72 A 72 72 0 0 1 0 72 A 36 36 0 0 1 0 0 A 36 36 0 0 0 0 -72" fill="#F59E0B"/>
+    
+    <!-- Small dots -->
+    <circle cx="0" cy="-36" r="10" fill="#020617"/>
+    <circle cx="0" cy="36" r="10" fill="#F59E0B"/>
+  </g>
+
+  <!-- Martial Arts Text Badge: IKS PI -->
+  <text x="256" y="372" text-anchor="middle" font-family="'Cinzel', 'Times New Roman', serif" font-weight="900" font-size="52" fill="#FFFFFF" letter-spacing="4">
+    IKS PI
+  </text>
+  
+  <!-- Subtitle: KEDIRI -->
+  <text x="256" y="404" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800" font-size="20" fill="#F59E0B" letter-spacing="6">
+    KOTA KEDIRI
+  </text>
+</svg>

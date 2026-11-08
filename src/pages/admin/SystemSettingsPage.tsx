@@ -48,7 +48,11 @@ import {
   Rocket,
   Download,
   ArrowRight,
+  Smartphone,
+  Share2,
 } from 'lucide-react';
+import { PWAInstallModal } from '../../components/common/PWAInstallModal';
+import { PWAInstallButton } from '../../components/common/PWAInstallButton';
 
 export const SystemSettingsPage: React.FC = () => {
   const { user } = useAuth();
@@ -57,6 +61,8 @@ export const SystemSettingsPage: React.FC = () => {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [waMessageCopied, setWaMessageCopied] = useState(false);
 
   // Password change state
   const [oldPassword, setOldPassword] = useState('');
@@ -65,7 +71,7 @@ export const SystemSettingsPage: React.FC = () => {
   const [changingPass, setChangingPass] = useState(false);
 
   // Active guide tab
-  const [activeTab, setActiveTab] = useState<'SETTINGS' | 'NOTICES' | 'ATHLETE_CREDENTIALS' | 'GAS_CODE' | 'DEPLOYMENT_GUIDE'>('SETTINGS');
+  const [activeTab, setActiveTab] = useState<'SETTINGS' | 'NOTICES' | 'ATHLETE_CREDENTIALS' | 'GAS_CODE' | 'DEPLOYMENT_GUIDE' | 'ANDROID_APP'>('SETTINGS');
 
   // Notice Management state
   const [notices, setNotices] = useState<AppNotice[]>([]);
@@ -575,6 +581,21 @@ export const SystemSettingsPage: React.FC = () => {
         >
           <Rocket className="w-4 h-4" />
           <span>Panduan Setup (AI Studio ➔ GitHub ➔ Vercel)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('ANDROID_APP')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            activeTab === 'ANDROID_APP'
+              ? 'bg-amber-500 text-slate-950 shadow'
+              : 'text-slate-400 hover:text-white bg-slate-900'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          <span>Aplikasi Android Anggota (PWA & APK)</span>
+          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+            Aktif
+          </span>
         </button>
       </div>
 
@@ -2125,6 +2146,178 @@ git push -u origin main`}
           </div>
         </div>
       )}
+
+      {/* TAB 4: PWA ANDROID & MOBILE APP GUIDE */}
+      {activeTab === 'ANDROID_APP' && (
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-8">
+          {/* Header */}
+          <div className="border-b border-slate-800 pb-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold mb-2">
+              <Smartphone className="w-3.5 h-3.5" />
+              <span>PWA ANDROID &amp; MOBILE APP SUDAH AKTIF</span>
+            </div>
+            <h2 className="text-xl md:text-2xl font-bold text-white font-serif">
+              Aplikasi Android untuk Anggota &amp; Atlit IKS PI
+            </h2>
+            <p className="text-xs text-slate-400 mt-1 max-w-3xl leading-relaxed">
+              Sistem ini telah dilengkapi teknologi <strong>Progressive Web App (PWA) Standar Android Chromium</strong>. Anggota tidak perlu mengunduh file berat dari Play Store — cukup buka link di Google Chrome HP dan pilih <em>"Instal aplikasi"</em>. Ikon resmi Tabungan IKS PI akan langsung terpasang di layar utama ponsel anggota.
+            </p>
+          </div>
+
+          {/* Quick Action Bar for Admin */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-slate-950 to-slate-950 border border-amber-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-bold shadow-lg shrink-0">
+                <Smartphone className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Bagikan Aplikasi ke Seluruh Anggota</h3>
+                <p className="text-xs text-slate-300">
+                  Salin teks ajakan WhatsApp atau coba instalasi langsung di perangkat ini.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsInstallModalOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs shadow-md transition flex items-center gap-2 cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Uji Pasang di HP Ini</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const currentOrigin = window.location.origin + window.location.pathname;
+                  const text = `*SALAM PERSAUDARAAN IKS.PI KERA SAKTI!* 🐒✋🥋\n\nKepada seluruh Saudara Atlit & Anggota IKS PI Cabang Kota Kediri:\n\nAplikasi *Tabungan Digital Atlit IKS PI Kediri* sekarang sudah dapat dipasang langsung di HP Android Anda tanpa perlu download dari Play Store!\n\n📲 *Link Aplikasi:* ${currentOrigin}\n\n*Cara Pasang di HP Android:* \n1. Buka link di atas lewat *Google Chrome* di HP Anda.\n2. Ketuk tombol titik tiga (⋮) di pojok kanan atas Chrome.\n3. Pilih *"Instal aplikasi"* atau *"Tambahkan ke Layar Utama"*.\n4. Ketuk *"Instal"*, ikon Tabungan IKS PI akan langsung muncul di beranda HP Anda!\n\nMari bersama menjaga kedisiplinan dan transparansi tabungan perguruan! 🥋`;
+                  navigator.clipboard.writeText(text);
+                  setWaMessageCopied(true);
+                  setTimeout(() => setWaMessageCopied(false), 3000);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-2 cursor-pointer shadow-md"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>{waMessageCopied ? 'Teks WhatsApp Tersalin!' : 'Salin Pesan Broadcast WhatsApp'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Step Visual Guide */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-amber-400 font-mono uppercase tracking-wider flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-400" />
+              <span>Petunjuk Langkah Pemasangan di HP Android (Untuk Diberitahukan ke Anggota)</span>
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-bold text-xs">
+                  1
+                </span>
+                <p className="text-xs font-bold text-white">Buka Link di Google Chrome</p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Anggota membuka link website (misal: <code>https://tabungan-ikspi.vercel.app</code>) menggunakan browser Google Chrome atau browser bawaan HP Android.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-bold text-xs">
+                  2
+                </span>
+                <p className="text-xs font-bold text-white">Buka Menu Titik Tiga (⋮)</p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Ketuk ikon menu titik tiga (⋮) di pojok kanan atas browser Google Chrome.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/40 flex items-center justify-center font-bold text-xs">
+                  3
+                </span>
+                <p className="text-xs font-bold text-white">Pilih "Instal Aplikasi"</p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Pilih menu <strong>"Instal aplikasi"</strong> (atau <strong>"Tambahkan ke Layar Utama / Add to Home screen"</strong>), lalu tekan <strong>"Instal"</strong>.
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                <span className="w-7 h-7 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold text-xs">
+                  4
+                </span>
+                <p className="text-xs font-bold text-white">Siap Dipakai Seperti App Asli</p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Ikon Tabungan IKS PI akan muncul di layar depan HP. Saat dibuka, aplikasi tampil layar penuh (*standalone full screen*) tanpa bar browser!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Keunggulan PWA vs Aplikasi Biasa */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
+              <p className="font-bold text-amber-400 text-xs">⚡ Ringan &amp; Tanpa Kuota Besar</p>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Ukuran sangat kecil (&lt; 1MB) sehingga tidak membebani memori ponsel anggota dengan HP spesifikasi rendah sekalipun.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
+              <p className="font-bold text-emerald-400 text-xs">🔄 Pembaruan Otomatis (Auto-Update)</p>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Setiap kali pengurus melakukan update sistem atau perubahan fitur, aplikasi di HP anggota otomatis ter-update tanpa perlu instal ulang.
+              </p>
+            </div>
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-1.5">
+              <p className="font-bold text-blue-400 text-xs">📱 Tampilan Layar Penuh (App Asli)</p>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Bilah URL peramban disembunyikan sepenuhnya sehingga anggota merasakan pengalaman layaknya aplikasi Android resmi.
+              </p>
+            </div>
+          </div>
+
+          {/* Pilihan: Membuat File APK (.apk) Mandiri via PWABuilder */}
+          <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                <FileCode className="w-4 h-4" />
+              </div>
+              <h3 className="text-sm font-bold text-white">
+                Ingin Membuat File Fisik .APK untuk Dibagikan Langsung di WhatsApp?
+              </h3>
+            </div>
+            <p className="text-xs text-slate-300 leading-relaxed">
+              Jika pengurus ingin membagikan file installer berekstensi <code>.apk</code> secara langsung kepada anggota via chat WhatsApp atau ingin mengunggahnya ke Google Play Store di masa depan, gunakan layanan resmi <strong>PWABuilder (by Microsoft)</strong> secara gratis:
+            </p>
+            <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+              <ol className="list-decimal list-inside space-y-1.5 text-slate-300 text-[11px]">
+                <li>
+                  Pastikan website aplikasi Anda sudah di-deploy ke Vercel (misal: <code>https://tabungan-ikspi.vercel.app</code>).
+                </li>
+                <li>
+                  Buka layanan resmi: <a href="https://www.pwabuilder.com" target="_blank" rel="noopener noreferrer" className="text-amber-400 font-bold underline">https://www.pwabuilder.com</a>
+                </li>
+                <li>
+                  Masukkan URL website Vercel Anda lalu klik <strong>"Start"</strong>.
+                </li>
+                <li>
+                  PWABuilder akan memvalidasi Manifest dan Icon PWA (semua sudah kita konfigurasi dengan skor 100%).
+                </li>
+                <li>
+                  Klik <strong>"Package for Android"</strong> &gt; pilih <strong>"Generate"</strong>.
+                </li>
+                <li>
+                  Unduh file <code>.apk</code> yang dihasilkan dan kirimkan langsung ke grup WhatsApp anggota!
+                </li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Instalasi PWA / Android */}
+      <PWAInstallModal isOpen={isInstallModalOpen} onClose={() => setIsInstallModalOpen(false)} />
 
       {/* Modal Reset Password Atlit */}
       {resetModalItem && (
