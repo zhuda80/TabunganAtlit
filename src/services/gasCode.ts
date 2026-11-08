@@ -107,6 +107,16 @@ function handleRequest(e) {
       output = handleDeleteRegistration(sessionDelete, params);
       return jsonResponse(output);
     }
+    if (action === "deleteAthlete") {
+      var sessionDelAth = verifyToken(params.token, params);
+      output = handleDeleteAthlete(sessionDelAth, params);
+      return jsonResponse(output);
+    }
+    if (action === "resetDatabase") {
+      var sessionResetDb = verifyToken(params.token, params);
+      output = handleResetDatabase(sessionResetDb, params);
+      return jsonResponse(output);
+    }
     if (action === "resetDefaultAdmin") {
       var ssAdmin = SpreadsheetApp.getActiveSpreadsheet();
       var sheetUsersAdmin = ssAdmin.getSheetByName(SHEETS.USERS);
@@ -136,6 +146,12 @@ function handleRequest(e) {
         break;
       case "updateAthlete":
         output = handleUpdateAthlete(session, params);
+        break;
+      case "deleteAthlete":
+        output = handleDeleteAthlete(session, params);
+        break;
+      case "resetDatabase":
+        output = handleResetDatabase(session, params);
         break;
       case "submitDeposit":
         output = handleSubmitDeposit(session, params);
@@ -1158,6 +1174,107 @@ function handleDeleteRegistration(session, params) {
   return { success: true, message: "Data pendaftaran sudah tidak ada di Google Sheets." };
 }
 
+function handleDeleteAthlete(session, params) {
+  var adminUser = (session && session.username) || (params && (params.adminUsername || params.username)) || "admin";
+  var isAdmin = (session && session.role === "ADMIN") || (adminUser && adminUser.toString().trim().toLowerCase() === "admin");
+  if (!isAdmin) return { success: false, message: "Akses ditolak. Hanya Administrator yang dapat menghapus atlet." };
+
+  var athleteId = (params && params.athleteId) ? params.athleteId.toString().trim() : "";
+  if (!athleteId) return { success: false, message: "ID Atlet wajib disertakan." };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetAtlit = ss.getSheetByName(SHEETS.DATA_ATLIT);
+  if (!sheetAtlit) return { success: false, message: "Sheet DATA_ATLIT belum diinisialisasi." };
+
+  var atlitData = sheetAtlit.getDataRange().getValues();
+  var foundRow = -1;
+  var targetUserId = "";
+  var targetNama = "";
+  for (var i = 1; i < atlitData.length; i++) {
+    if ((atlitData[i][0] || "").toString().trim() === athleteId) {
+      foundRow = i + 1;
+      targetUserId = (atlitData[i][1] || "").toString().trim();
+      targetNama = (atlitData[i][3] || "").toString().trim();
+      break;
+    }
+  }
+
+  if (foundRow > 0) {
+    sheetAtlit.deleteRow(foundRow);
+
+    // Also remove from USERS sheet
+    if (targetUserId) {
+      var sheetUsers = ss.getSheetByName(SHEETS.USERS);
+      if (sheetUsers) {
+        var uData = sheetUsers.getDataRange().getValues();
+        for (var u = 1; u < uData.length; u++) {
+          if ((uData[u][0] || "").toString().trim() === targetUserId) {
+            sheetUsers.deleteRow(u + 1);
+            break;
+          }
+        }
+      }
+    }
+
+    // Also remove from SALDO sheet
+    var sheetSaldo = ss.getSheetByName(SHEETS.SALDO);
+    if (sheetSaldo) {
+      var sData = sheetSaldo.getDataRange().getValues();
+      for (var s = 1; s < sData.length; s++) {
+        if ((sData[s][0] || "").toString().trim() === athleteId) {
+          sheetSaldo.deleteRow(s + 1);
+          break;
+        }
+      }
+    }
+
+    logActivity(ss, adminUser, "ADMIN", "DELETE_ATLIT", "ATLIT", "Menghapus data anggota/atlet: " + (targetNama || athleteId));
+    return { success: true, message: "Data anggota " + (targetNama || athleteId) + " berhasil dihapus permanen dari Google Sheets." };
+  }
+
+  return { success: false, message: "Data atlet tidak ditemukan di spreadsheet." };
+}
+
+function handleResetDatabase(session, params) {
+  var adminUser = (session && session.username) || (params && (params.adminUsername || params.username)) || "admin";
+  var isAdmin = (session && session.role === "ADMIN") || (adminUser && adminUser.toString().trim().toLowerCase() === "admin");
+  if (!isAdmin) return { success: false, message: "Akses ditolak. Khusus Administrator." };
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  var sheetsToClear = [
+    SHEETS.DATA_ATLIT,
+    SHEETS.PENDAFTARAN,
+    SHEETS.SETORAN,
+    SHEETS.PENARIKAN,
+    SHEETS.SALDO,
+    SHEETS.MUTASI
+  ];
+
+  for (var k = 0; k < sheetsToClear.length; k++) {
+    var sh = ss.getSheetByName(sheetsToClear[k]);
+    if (sh && sh.getLastRow() > 1) {
+      sh.deleteRows(2, sh.getLastRow() - 1);
+    }
+  }
+
+  var sheetUsers = ss.getSheetByName(SHEETS.USERS);
+  if (sheetUsers) {
+    if (sheetUsers.getLastRow() > 1) {
+      sheetUsers.deleteRows(2, sheetUsers.getLastRow() - 1);
+    }
+    var salt = Utilities.getUuid().substring(0, 8);
+    var hash = hashPassword("admin123", salt);
+    var now = new Date().toISOString();
+    sheetUsers.appendRow([
+      "USR-ADMIN-01", "admin", hash, salt, "ADMIN", "AKTIF", now, "", "", ""
+    ]);
+  }
+
+  logActivity(ss, adminUser, "ADMIN", "RESET_DATABASE", "SISTEM", "Mengosongkan seluruh basis data atlit dan transaksi.");
+  return { success: true, message: "Seluruh data atlit, transaksi, dan riwayat di Google Sheets berhasil dikosongkan dan direset ke kondisi awal." };
+}
+
 // ================= MUTATION & BALANCE HELPERS =================
 function getAthleteBalanceValue(ss, athleteId) {
   var sheetSaldo = ss.getSheetByName(SHEETS.SALDO);
@@ -1345,14 +1462,10 @@ function handleGetDashboard(session, params) {
         totalEndapanTerkunci: totalEndapanTerkunci,
         totalSaldoBebasLikuid: totalSaldoBebasLikuid,
         persentaseKepatuhanEndapan: persentaseKepatuhanEndapan,
-        chartDataBulanan: [
-          { bulan: 'Mei', setoran: 1200000, penarikan: 400000, saldo: 800000 },
-          { bulan: 'Jun', setoran: 1850000, penarikan: 350000, saldo: 2300000 },
-          { bulan: 'Jul', setoran: 2400000, penarikan: 800000, saldo: 3900000 },
-          { bulan: 'Agu', setoran: 3100000, penarikan: 950000, saldo: 6050000 },
-          { bulan: 'Sep', setoran: 2900000, penarikan: 600000, saldo: 8350000 },
-          { bulan: 'Okt', setoran: totalMasuk, penarikan: totalKeluar, saldo: totalSaldo }
-        ],
+        chartDataBulanan: (totalMasuk > 0 || totalKeluar > 0 || totalSaldo > 0) ? [
+          { bulan: 'Periode Lalu', setoran: 0, penarikan: 0, saldo: 0 },
+          { bulan: 'Bulan Ini', setoran: totalMasuk, penarikan: totalKeluar, saldo: totalSaldo }
+        ] : [],
         transaksiTerbaru: recentTrx.slice(0, 7)
       }
     };

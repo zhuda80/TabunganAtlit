@@ -16,6 +16,7 @@ import {
   Phone,
   CreditCard,
   ArrowDownLeft,
+  Trash2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AdminDepositModal } from '../../components/admin/AdminDepositModal';
@@ -184,6 +185,26 @@ export const AthletesManagementPage: React.FC = () => {
       }
     } catch (err: any) {
       setToast({ type: 'error', message: err.message || 'Terjadi kesalahan saat mengubah status' });
+    }
+  };
+
+  const handleDeleteAthlete = async (athlete: AthleteProfile) => {
+    const confirmed = window.confirm(
+      `PERINGATAN: Apakah Anda yakin ingin menghapus data anggota "${athlete.namaLengkap}" (${athlete.nomorInduk}) secara permanen?\n\nSeluruh identitas dan akun login atlet ini akan dihapus dari sistem.`
+    );
+    if (!confirmed) return;
+
+    setToast({ type: 'success', message: `Menghapus data anggota ${athlete.namaLengkap}...` });
+    try {
+      const res = await api.deleteAthlete(athlete.id);
+      if (res.success) {
+        setToast({ type: 'success', message: res.message });
+        await fetchAthletes();
+      } else {
+        setToast({ type: 'error', message: res.message || 'Gagal menghapus data anggota.' });
+      }
+    } catch (err: any) {
+      setToast({ type: 'error', message: err?.message || 'Terjadi kesalahan saat menghapus anggota.' });
     }
   };
 
@@ -391,7 +412,7 @@ export const AthletesManagementPage: React.FC = () => {
                   </Link>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={() => setEditingAthlete(ath)}
                     title="Edit Profil Atlit"
@@ -409,6 +430,14 @@ export const AthletesManagementPage: React.FC = () => {
                     }`}
                   >
                     <Power className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAthlete(ath)}
+                    title={`Hapus Anggota ${ath.namaLengkap}`}
+                    className="px-2 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus</span>
                   </button>
                 </div>
               </div>

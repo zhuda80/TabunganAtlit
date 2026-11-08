@@ -581,15 +581,9 @@ export const api = {
           ? allRecent.slice(0, 7)
           : allRecent.filter((t: any) => t.athleteId === session.athleteId).slice(0, 5);
       }
-      if (!Array.isArray(remote.stats.chartDataBulanan)) {
-        remote.stats.chartDataBulanan = [
-          { bulan: 'Mei', setoran: 1200000, penarikan: 400000, saldo: 800000 },
-          { bulan: 'Jun', setoran: 1850000, penarikan: 350000, saldo: 2300000 },
-          { bulan: 'Jul', setoran: 2400000, penarikan: 800000, saldo: 3900000 },
-          { bulan: 'Agu', setoran: 3100000, penarikan: 950000, saldo: 6050000 },
-          { bulan: 'Sep', setoran: 2900000, penarikan: 600000, saldo: 8350000 },
-          { bulan: 'Okt', setoran: remote.stats.totalUangMasuk || 0, penarikan: remote.stats.totalUangKeluar || 0, saldo: remote.stats.totalSaldoSeluruhAtlit || 0 },
-        ];
+      const isRemoteEmpty = (remote.stats.totalUangMasuk || 0) === 0 && (remote.stats.totalUangKeluar || 0) === 0 && (remote.stats.totalSaldoSeluruhAtlit || 0) === 0;
+      if (!Array.isArray(remote.stats.chartDataBulanan) || isRemoteEmpty) {
+        remote.stats.chartDataBulanan = [];
       }
       return remote;
     }
@@ -625,14 +619,14 @@ export const api = {
       const totalSaldoBebasLikuid = Math.max(0, totalSaldo - totalEndapanTerkunci);
       const persentaseKepatuhanEndapan = totalTargetEndapan > 0 ? Math.round((totalEndapanTerkunci / totalTargetEndapan) * 100) : 0;
 
-      // Clean monthly grouping: dynamic based on real data
-      const chartDataBulanan = [
-        { bulan: 'Nov', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Des', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Jan', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Feb', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Bulan Ini', setoran: totalMasuk, penarikan: totalKeluar, saldo: totalSaldo },
-      ];
+      // Clean monthly grouping: empty if no transactions or all zero
+      const hasAnyData = totalMasuk > 0 || totalKeluar > 0 || totalSaldo > 0;
+      const chartDataBulanan = hasAnyData
+        ? [
+            { bulan: 'Periode Lalu', setoran: 0, penarikan: 0, saldo: 0 },
+            { bulan: 'Bulan Ini', setoran: totalMasuk, penarikan: totalKeluar, saldo: totalSaldo },
+          ]
+        : [];
 
       const allRecent: any[] = [...deposits, ...withdrawals].sort(
         (a, b) => new Date(b.tanggalPengajuan).getTime() - new Date(a.tanggalPengajuan).getTime()
@@ -673,14 +667,14 @@ export const api = {
       const athTotalSetoran = myAthlete?.totalSetoran || athBalance;
       const athTotalPenarikan = myAthlete?.totalPenarikan || 0;
 
-      // Clean progressive trend of athlete savings growth starting from zero
-      const chartDataTren = [
-        { bulan: 'Nov', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Des', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Jan', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Feb', setoran: 0, penarikan: 0, saldo: 0 },
-        { bulan: 'Bulan Ini', setoran: athTotalSetoran, penarikan: athTotalPenarikan, saldo: athBalance },
-      ];
+      // Clean progressive trend of athlete savings growth: empty if no savings
+      const hasAthData = athTotalSetoran > 0 || athTotalPenarikan > 0 || athBalance > 0;
+      const chartDataTren = hasAthData
+        ? [
+            { bulan: 'Periode Lalu', setoran: 0, penarikan: 0, saldo: 0 },
+            { bulan: 'Bulan Ini', setoran: athTotalSetoran, penarikan: athTotalPenarikan, saldo: athBalance },
+          ]
+        : [];
 
       const saldoEndapanTerkunci = Math.min(athBalance, saldoEndapanWajib);
       const saldoBebasDitarik = Math.max(0, athBalance - saldoEndapanWajib);
@@ -762,6 +756,54 @@ export const api = {
       success: true,
       message: remote?.message || (updates.status ? `Status atlet ${updatedAthlete.namaLengkap} berhasil diubah menjadi ${updatedAthlete.status === 'AKTIF' ? 'Aktif' : 'Nonaktif'}.` : 'Data identitas atlet berhasil diperbarui!'),
       athlete: updatedAthlete
+    };
+  },
+
+  async deleteAthlete(athleteId: string): Promise<{ success: boolean; message: string }> {
+    let remote: any = null;
+    try {
+      remote = await this.callRemoteGas('deleteAthlete', { athleteId });
+    } catch (e) {
+      console.warn('Remote deleteAthlete notice:', e);
+    }
+
+    const athletes = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
+    const targetAth = athletes.find(a => a.id === athleteId);
+    if (!targetAth) {
+      return { success: false, message: 'Data atlet tidak ditemukan.' };
+    }
+
+    // Remove athlete from athletes store
+    const updatedAthletes = athletes.filter(a => a.id !== athleteId);
+    setStore('athletes', updatedAthletes);
+
+    // Remove user account from users store
+    const users = getStore<any[]>('users', SEED_USERS);
+    const updatedUsers = users.filter(u => u.userId !== targetAth.userId);
+    setStore('users', updatedUsers);
+
+    // Also remove any pending registrations matching this athlete
+    const pendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
+    const updatedPendings = pendings.filter(p => p.nomorInduk !== targetAth.nomorInduk && p.username !== targetAth.userId);
+    setStore('pendings', updatedPendings);
+
+    // Record activity
+    recordActivity(
+      'admin',
+      'ADMIN',
+      'DELETE_ATLIT',
+      'ATLIT',
+      `Menghapus data anggota/atlet ${targetAth.namaLengkap} (${targetAth.nomorInduk}) secara permanen.`
+    );
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_athletes_updated'));
+      window.dispatchEvent(new Event('ikspi_transactions_updated'));
+    }
+
+    return {
+      success: true,
+      message: remote?.message || `Data atlet ${targetAth.namaLengkap} (${targetAth.nomorInduk}) berhasil dihapus permanen dari sistem.`,
     };
   },
 
@@ -2181,6 +2223,13 @@ export const api = {
 
   // 18. RESET DATABASE TO CLEAN FACTORY STATE
   async resetToCleanState(): Promise<{ success: boolean; message: string }> {
+    let remote: any = null;
+    try {
+      remote = await this.callRemoteGas('resetDatabase', {});
+    } catch (e) {
+      console.warn('Remote resetDatabase notice:', e);
+    }
+
     const defaultAdmin = [
       {
         userId: 'USR-ADMIN-01',
@@ -2216,19 +2265,22 @@ export const api = {
         role: 'ADMIN',
         action: 'RESET_DATABASE',
         kategori: 'SISTEM',
-        detail: 'Inisialisasi sistem tabungan bersih - seluruh data atlit dan transaksi dummy dikosongkan.',
+        detail: 'Inisialisasi sistem tabungan bersih - seluruh data atlit dan transaksi dikosongkan.',
       },
     ]);
     setStore('notices', SEED_NOTICES);
 
     if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('ikspi_athletes_updated'));
+      window.dispatchEvent(new Event('ikspi_transactions_updated'));
+      window.dispatchEvent(new Event('ikspi_registrations_updated'));
       window.dispatchEvent(new Event('ikspi_notices_updated'));
       window.dispatchEvent(new Event('ikspi_settings_updated'));
     }
 
     return {
       success: true,
-      message: 'Seluruh data atlit dan transaksi berhasil dikosongkan! Aplikasi kini seperti aplikasi baru dengan akun admin default (admin/admin123).',
+      message: remote?.message || 'Seluruh data atlit, transaksi kas, dan tren grafik berhasil dikosongkan! Aplikasi kini bersih seperti aplikasi baru dengan akun admin default (admin/admin123).',
     };
   },
 };

@@ -109,6 +109,11 @@ export const SavingsGrowthChart: React.FC<SavingsGrowthChartProps> = ({
   const growthPercentage =
     initialSaldo > 0 ? Math.round(((latestSaldo - initialSaldo) / initialSaldo) * 100) : 100;
 
+  const isDataEmpty =
+    !data ||
+    data.length === 0 ||
+    (totalSetoran === 0 && totalPenarikan === 0 && latestSaldo === 0);
+
   // Format Y Axis Compact (e.g. 1jt, 500rb)
   const formatYAxis = (val: number) => {
     if (val >= 1000000) {
@@ -216,7 +221,20 @@ export const SavingsGrowthChart: React.FC<SavingsGrowthChartProps> = ({
 
       {/* Main Interactive Recharts Canvas */}
       <div className="h-[280px] sm:h-[320px] w-full pt-2">
-        <ResponsiveContainer width="100%" height="100%">
+        {isDataEmpty ? (
+          <div className="h-full w-full flex flex-col items-center justify-center rounded-2xl bg-slate-950/60 border border-slate-800/80 p-6 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-amber-400/80" />
+            </div>
+            <div className="max-w-md">
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Tren Pertumbuhan & Arus Kas Kosong</h4>
+              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                Basis data belum memiliki transaksi setoran atau telah direset. Grafik visual akumulasi kas dan komparasi arus kas bulanan akan otomatis tampil setelah ada transaksi yang disetujui.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
           {chartType === 'growth' ? (
             <AreaChart
               data={data}
@@ -370,6 +388,7 @@ export const SavingsGrowthChart: React.FC<SavingsGrowthChartProps> = ({
             </BarChart>
           )}
         </ResponsiveContainer>
+        )}
       </div>
 
       {/* Chart Footer Indicator */}
