@@ -3,6 +3,8 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { AthleteProfile } from '../../types';
 import { formatTanggal, formatRupiah } from '../../utils/formatters';
+import { BarcodeCard } from '../../components/common/BarcodeCard';
+import { ScanCardInputModal } from '../../components/common/ScanCardInputModal';
 import {
   User,
   Shield,
@@ -23,6 +25,8 @@ import {
   BookOpen,
   Hash,
   FileText,
+  QrCode,
+  Barcode as BarcodeIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -57,6 +61,8 @@ export const AthleteProfilePage: React.FC = () => {
   const [tempatLahir, setTempatLahir] = useState<string>('');
   const [tanggalLahir, setTanggalLahir] = useState<string>('');
   const [alamat, setAlamat] = useState<string>('');
+  const [barcode, setBarcode] = useState<string>('');
+  const [showScanCardModal, setShowScanCardModal] = useState(false);
 
   // Password change form
   const [oldPassword, setOldPassword] = useState('');
@@ -64,8 +70,8 @@ export const AthleteProfilePage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passLoading, setPassLoading] = useState(false);
 
-  // Active view tab ('identity' | 'security')
-  const [activeTab, setActiveTab] = useState<'identity' | 'security'>('identity');
+  // Active view tab ('identity' | 'barcode' | 'security')
+  const [activeTab, setActiveTab] = useState<'identity' | 'barcode' | 'security'>('identity');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,6 +91,7 @@ export const AthleteProfilePage: React.FC = () => {
     setTempatLahir(data.tempatLahir || '');
     setTanggalLahir(data.tanggalLahir ? data.tanggalLahir.substring(0, 10) : '');
     setAlamat(data.alamat || '');
+    setBarcode(data.barcode || data.nomorInduk || '');
 
     // Handle unit / ranting dropdown & custom value
     const currentUnit = data.unitRanting || '';
@@ -227,6 +234,7 @@ export const AthleteProfilePage: React.FC = () => {
         tempatLahir: tempatLahir.trim(),
         tanggalLahir: tanggalLahir || profile.tanggalLahir,
         alamat: alamat.trim(),
+        barcode: barcode.trim() || undefined,
       };
 
       const res = await api.updateAthlete(profile.id, updates);
@@ -242,6 +250,7 @@ export const AthleteProfilePage: React.FC = () => {
           niw: updates.niw,
           nik: updates.nik,
           telepon: updates.nomorWhatsApp,
+          barcode: updates.barcode,
         });
 
         // Update local state profile
@@ -258,6 +267,28 @@ export const AthleteProfilePage: React.FC = () => {
       setToast({ type: 'error', message: err?.message || 'Terjadi kesalahan sistem.' });
     } finally {
       setSavingIdentity(false);
+    }
+  };
+
+  const handleSaveBarcode = async (newBarcode: string) => {
+    if (!profile) return;
+    const clean = newBarcode.trim();
+    if (!clean) return;
+    try {
+      const res = await api.updateAthlete(profile.id, { barcode: clean });
+      if (res.success) {
+        setBarcode(clean);
+        setProfile((prev) => (prev ? { ...prev, barcode: clean } : null));
+        updateUserSession({ barcode: clean });
+        setToast({
+          type: 'success',
+          message: `Kode Barcode login berhasil disimpan: ${clean}`,
+        });
+      } else {
+        setToast({ type: 'error', message: res.message || 'Gagal menyimpan kode barcode.' });
+      }
+    } catch (err: any) {
+      setToast({ type: 'error', message: err?.message || 'Terjadi kesalahan sistem.' });
     }
   };
 
@@ -354,6 +385,19 @@ export const AthleteProfilePage: React.FC = () => {
           >
             <User className="w-3.5 h-3.5" />
             <span>Ubah Identitas</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('barcode')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+              activeTab === 'barcode'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <QrCode className="w-3.5 h-3.5" />
+            <span>Kartu &amp; Barcode Login</span>
           </button>
 
           <button
@@ -628,11 +672,63 @@ export const AthleteProfilePage: React.FC = () => {
                 </div>
               </div>
 
+              {/* 3. Kode Barcode / QR Login Manual */}
+              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                    <BarcodeIcon className="w-3.5 h-3.5" />
+                    <span>3. Kode Barcode / QR Login (Bisa Diisi Manual)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('barcode')}
+                    className="text-[10px] text-amber-400 hover:underline font-semibold flex items-center gap-1"
+                  >
+                    <QrCode className="w-3 h-3" />
+                    <span>Buka Kartu &amp; QR</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap sm:flex-nowrap gap-2">
+                  <input
+                    type="text"
+                    value={barcode}
+                    onChange={(e) => setBarcode(e.target.value.toUpperCase())}
+                    placeholder={`Default: ${angkatan && niw ? `${angkatan}/${niw}` : profile?.nomorInduk || 'IKS-KDR'}`}
+                    className="flex-1 px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowScanCardModal(true)}
+                    title="Pindai QR Code atau Barcode dari kartu fisik, kartu pelajar sekolah, dll."
+                    className="px-3.5 py-2 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-300 border border-cyan-500/40 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Pindai Kartu Sekolah</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rand = 'IKS-ATL-' + Math.floor(100000 + Math.random() * 900000);
+                      setBarcode(rand);
+                    }}
+                    title="Buat kode acak"
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Acak</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Anda bisa mengisi kode barcode kartu fisik Anda sendiri, atau biarkan menggunakan Nomor Induk. Kode ini digunakan untuk login dengan scan barcode di halaman depan.
+                </p>
+              </div>
+
               {/* 4. Unit / Ranting Latihan (Pilihan / Input Manual) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
                   <span>
-                    Unit / Ranting Latihan <span className="text-rose-400">*</span>
+                    4. Unit / Ranting Latihan <span className="text-rose-400">*</span>
                   </span>
                   <span className="text-[10px] text-amber-400">Dapat dipilih atau diisi manual</span>
                 </label>
@@ -827,6 +923,37 @@ export const AthleteProfilePage: React.FC = () => {
             </div>
           </div>
         </div>
+      ) : activeTab === 'barcode' ? (
+        /* Tab Barcode: Kartu Digital & Kode Barcode Login */
+        <div className="space-y-6">
+          <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mb-2">
+                <QrCode className="w-3.5 h-3.5" />
+                <span>KARTU DIGITAL &amp; SCANNER LOGIN</span>
+              </div>
+              <h3 className="text-xl font-bold text-white font-serif">
+                Kartu &amp; Kode Barcode Anggota
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                Sesuaikan desain kartu (Emas, Merah Marun, Hitam, Putih Siap Cetak), ganti warna QR Code, ubah kode barcode login manual, atau unduh kartu tanda anggota berkualitas tinggi untuk disimpan atau dicetak.
+              </p>
+            </div>
+
+            {profile && (
+              <BarcodeCard
+                code={barcode || profile.barcode || profile.nomorInduk || ''}
+                namaLengkap={profile.namaLengkap}
+                nomorInduk={profile.nomorInduk}
+                unitRanting={profile.unitRanting}
+                fotoUrl={profile.fotoUrl}
+                role="ATLIT"
+                editable={true}
+                onSaveBarcode={handleSaveBarcode}
+              />
+            )}
+          </div>
+        </div>
       ) : (
         /* Tab Keamanan: Ganti Password */
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -913,9 +1040,9 @@ export const AthleteProfilePage: React.FC = () => {
               </div>
 
               <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                <strong className="text-emerald-400 block mb-0.5">Sesi Kedaluwarsa Otomatis</strong>
+                <strong className="text-emerald-400 block mb-0.5">Sesi Kedaluwarsa Otomatis (1 Jam)</strong>
                 <p className="text-[11px] text-slate-400">
-                  Sesi login aktif memiliki batas waktu 24 jam dan terlindungi token unik.
+                  Sesi login anggota otomatis log out setelah 1 jam demi perlindungan keamanan akun dan tabungan.
                 </p>
               </div>
 
@@ -929,6 +1056,22 @@ export const AthleteProfilePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Physical Card Scanner Modal */}
+      <ScanCardInputModal
+        isOpen={showScanCardModal}
+        onClose={() => setShowScanCardModal(false)}
+        onSelectCode={(scannedCode) => {
+          setBarcode(scannedCode);
+          setToast({
+            type: 'success',
+            message: `Kode kartu berhasil dipindai: ${scannedCode}. Klik Simpan Perubahan untuk menyimpan ke profil.`,
+          });
+        }}
+        title="Pindai Kartu Anggota / Kartu Sekolah"
+        subtitle="Arahkan kamera ke QR Code / Barcode kartu pelajar atau unggah foto kartu fisik"
+        targetLabel="Kode Barcode Login Atlet"
+      />
     </div>
   );
 };

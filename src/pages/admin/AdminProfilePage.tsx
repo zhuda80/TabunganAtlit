@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { AdminProfile } from '../../types';
 import { formatTanggal } from '../../utils/formatters';
+import { BarcodeCard } from '../../components/common/BarcodeCard';
 import {
   User,
   Shield,
@@ -30,6 +31,8 @@ import {
   EyeOff,
   Lock,
   Sparkles,
+  QrCode,
+  Barcode as BarcodeIcon,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -55,8 +58,8 @@ export const AdminProfilePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Active Tab: 'identity' | 'security' | 'privileges'
-  const [activeTab, setActiveTab] = useState<'identity' | 'security' | 'privileges'>('identity');
+  // Active Tab: 'identity' | 'barcode' | 'security' | 'privileges'
+  const [activeTab, setActiveTab] = useState<'identity' | 'barcode' | 'security' | 'privileges'>('identity');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Profile Identity Form Fields
@@ -69,6 +72,7 @@ export const AdminProfilePage: React.FC = () => {
   const [unitRanting, setUnitRanting] = useState('');
   const [catatan, setCatatan] = useState('');
   const [fotoUrl, setFotoUrl] = useState('');
+  const [barcode, setBarcode] = useState('');
 
   // Password Change Form
   const [oldPassword, setOldPassword] = useState('');
@@ -95,6 +99,7 @@ export const AdminProfilePage: React.FC = () => {
     setUnitRanting(data.unitRanting || '');
     setCatatan(data.catatan || '');
     setFotoUrl(data.fotoUrl || '');
+    setBarcode(data.barcode || data.username || 'admin');
 
     const currentJabatan = data.jabatan || '';
     if (JABATAN_PRESETS.includes(currentJabatan) && currentJabatan !== 'Lainnya (Isi Manual)') {
@@ -209,6 +214,7 @@ export const AdminProfilePage: React.FC = () => {
         unitRanting: unitRanting.trim() || 'Pengurus Cabang Kota Kediri',
         catatan: catatan.trim(),
         fotoUrl: fotoUrl.trim(),
+        barcode: barcode.trim() || undefined,
       };
 
       const res = await api.updateAdminProfile(profile.userId, updates);
@@ -221,6 +227,7 @@ export const AdminProfilePage: React.FC = () => {
           email: res.profile.email,
           alamat: res.profile.alamat,
           fotoUrl: res.profile.fotoUrl,
+          barcode: res.profile.barcode,
         });
         setToast({ type: 'success', message: 'Profil Administrator berhasil diperbarui!' });
       } else {
@@ -230,6 +237,25 @@ export const AdminProfilePage: React.FC = () => {
       setToast({ type: 'error', message: err?.message || 'Terjadi kesalahan sistem.' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveBarcode = async (newCode: string) => {
+    if (!profile) return;
+    const clean = newCode.trim();
+    if (!clean) return;
+    try {
+      const res = await api.updateAdminProfile(profile.userId, { barcode: clean });
+      if (res.success) {
+        setBarcode(clean);
+        setProfile((prev) => (prev ? { ...prev, barcode: clean } : null));
+        updateUserSession({ barcode: clean });
+        setToast({ type: 'success', message: `Kode Barcode login admin berhasil disimpan: ${clean}` });
+      } else {
+        setToast({ type: 'error', message: res.message || 'Gagal menyimpan barcode.' });
+      }
+    } catch (err: any) {
+      setToast({ type: 'error', message: err?.message || 'Terjadi kesalahan sistem.' });
     }
   };
 
@@ -483,6 +509,18 @@ export const AdminProfilePage: React.FC = () => {
         </button>
 
         <button
+          onClick={() => setActiveTab('barcode')}
+          className={`flex items-center gap-2 py-3 px-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
+            activeTab === 'barcode'
+              ? 'border-amber-400 text-amber-400 bg-amber-400/5 rounded-t-lg'
+              : 'border-transparent text-slate-400 hover:text-slate-200 hover:border-slate-700'
+          }`}
+        >
+          <QrCode className="w-4 h-4" />
+          <span>Kartu &amp; Barcode Login</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('security')}
           className={`flex items-center gap-2 py-3 px-4 text-xs sm:text-sm font-semibold border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'security'
@@ -491,7 +529,7 @@ export const AdminProfilePage: React.FC = () => {
           }`}
         >
           <KeyRound className="w-4 h-4" />
-          <span>Keamanan & Sandi</span>
+          <span>Keamanan &amp; Sandi</span>
         </button>
 
         <button
@@ -716,6 +754,37 @@ export const AdminProfilePage: React.FC = () => {
             </div>
           </div>
         </form>
+      )}
+
+      {/* TAB CONTENT: KARTU & BARCODE LOGIN */}
+      {activeTab === 'barcode' && (
+        <div className="space-y-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+            <div className="border-b border-slate-800 pb-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-semibold mb-2">
+                <QrCode className="w-3.5 h-3.5" />
+                <span>KARTU ADMINISTRATOR &amp; SCANNER LOGIN</span>
+              </div>
+              <h3 className="text-xl font-bold text-white font-serif">
+                Kartu &amp; Kode Barcode Administrator
+              </h3>
+              <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+                Administrator dapat mengubah atau menambahkan kode barcode login secara manual. Anda dapat memindai barcode ini di halaman login untuk langsung masuk tanpa mengetikkan username dan password.
+              </p>
+            </div>
+
+            <BarcodeCard
+              code={barcode || profile?.barcode || profile?.username || 'admin'}
+              namaLengkap={profile?.namaLengkap || 'Administrator IKS PI'}
+              nomorInduk={profile?.userId || 'USR-ADMIN-01'}
+              unitRanting={profile?.unitRanting || 'Pengurus Cabang Kota Kediri'}
+              fotoUrl={profile?.fotoUrl}
+              role="ADMIN"
+              editable={true}
+              onSaveBarcode={handleSaveBarcode}
+            />
+          </div>
+        </div>
       )}
 
       {/* TAB CONTENT 2: KEAMANAN & SANDI */}

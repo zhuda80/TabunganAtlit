@@ -17,9 +17,14 @@ import {
   CreditCard,
   ArrowDownLeft,
   Trash2,
+  QrCode,
+  RefreshCw,
+  Camera,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AdminDepositModal } from '../../components/admin/AdminDepositModal';
+import { BarcodeCard } from '../../components/common/BarcodeCard';
+import { ScanCardInputModal } from '../../components/common/ScanCardInputModal';
 
 export const AthletesManagementPage: React.FC = () => {
   const [athletes, setAthletes] = useState<AthleteProfile[]>([]);
@@ -32,6 +37,8 @@ export const AthletesManagementPage: React.FC = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
   const [selectedAthleteForDeposit, setSelectedAthleteForDeposit] = useState<string>('');
+  const [selectedAthleteForCard, setSelectedAthleteForCard] = useState<AthleteProfile | null>(null);
+  const [scanModalTarget, setScanModalTarget] = useState<'add' | 'edit' | null>(null);
   const [addForm, setAddForm] = useState({
     namaLengkap: '',
     nik: '',
@@ -44,6 +51,7 @@ export const AthletesManagementPage: React.FC = () => {
     unitRanting: '',
     status: 'AKTIF' as const,
     password: '',
+    barcode: '',
   });
 
   // Edit athlete modal
@@ -105,6 +113,7 @@ export const AthletesManagementPage: React.FC = () => {
           nomorWhatsApp: addForm.nomorWhatsApp.trim(),
           unitRanting: addForm.unitRanting.trim(),
           status: 'AKTIF',
+          barcode: addForm.barcode.trim() || undefined,
         },
         addForm.password || 'atlit123'
       );
@@ -123,6 +132,7 @@ export const AthletesManagementPage: React.FC = () => {
           unitRanting: '',
           status: 'AKTIF',
           password: '',
+          barcode: '',
         });
         await fetchAthletes();
       } else {
@@ -269,6 +279,13 @@ export const AthletesManagementPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start">
+          <Link
+            to="/admin/custom-qr"
+            className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 font-bold text-xs shadow-lg transition flex items-center gap-2 cursor-pointer"
+          >
+            <QrCode className="w-4 h-4" />
+            <span>Studio Custom QR</span>
+          </Link>
           <button
             onClick={() => {
               setSelectedAthleteForDeposit('');
@@ -373,6 +390,12 @@ export const AthletesManagementPage: React.FC = () => {
                       </span>
                     </div>
                   )}
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">Kode Barcode / QR:</span>
+                    <span className="font-mono text-cyan-400 font-semibold">
+                      {ath.barcode || ath.nomorInduk || 'Otomatis No Induk'}
+                    </span>
+                  </div>
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-800/80">
                     <span className="text-slate-400 font-medium">Saldo Tabungan:</span>
                     <span className="font-extrabold text-amber-400 font-mono">{formatRupiah(ath.saldoSaatIni)}</span>
@@ -416,6 +439,13 @@ export const AthletesManagementPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setSelectedAthleteForCard(ath)}
+                    title={`Lihat & Cetak Kartu Barcode ${ath.namaLengkap}`}
+                    className="p-1.5 rounded-lg text-amber-400 hover:text-white hover:bg-amber-400/20 transition cursor-pointer"
+                  >
+                    <QrCode className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => setEditingAthlete(ath)}
                     title="Edit Profil Atlit"
@@ -599,6 +629,44 @@ export const AthletesManagementPage: React.FC = () => {
           </div>
 
           <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-semibold text-slate-300">
+                Kode Barcode / QR Login (Opsional)
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setScanModalTarget('add')}
+                  className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  title="Pindai QR / Barcode dari kartu fisik, kartu pelajar sekolah, dll."
+                >
+                  <Camera className="w-3 h-3" /> Pindai Kartu Sekolah
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const rand = 'IKS-ATL-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+                    setAddForm({ ...addForm, barcode: rand });
+                  }}
+                  className="text-[11px] text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className="w-3 h-3" /> Acak
+                </button>
+              </div>
+            </div>
+            <input
+              type="text"
+              value={addForm.barcode}
+              onChange={(e) => setAddForm({ ...addForm, barcode: e.target.value.toUpperCase().replace(/\s+/g, '-') })}
+              placeholder="Contoh: IKS-ATL-88219 (Kosongkan bila gunakan No Induk)"
+              className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+            />
+            <p className="text-[10px] text-slate-500 mt-1">
+              Jika dikosongkan, atlet tetap bisa langsung login scan menggunakan Nomor Induk.
+            </p>
+          </div>
+
+          <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1">Password Akun (Default: atlit123)</label>
             <input
               type="password"
@@ -717,6 +785,44 @@ export const AthletesManagementPage: React.FC = () => {
             </div>
 
             <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-300">
+                  Kode Barcode / QR Login
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScanModalTarget('edit')}
+                    className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Pindai QR / Barcode dari kartu fisik, kartu pelajar sekolah, dll."
+                  >
+                    <Camera className="w-3 h-3" /> Pindai Kartu Sekolah
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rand = 'IKS-ATL-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+                      setEditingAthlete({ ...editingAthlete, barcode: rand });
+                    }}
+                    className="text-[11px] text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Acak
+                  </button>
+                </div>
+              </div>
+              <input
+                type="text"
+                value={editingAthlete.barcode || ''}
+                onChange={(e) => setEditingAthlete({ ...editingAthlete, barcode: e.target.value.toUpperCase().replace(/\s+/g, '-') })}
+                placeholder="Contoh: IKS-ATL-88219"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white font-mono focus:outline-none focus:border-amber-400"
+              />
+              <p className="text-[10px] text-slate-500 mt-1">
+                Atlet dapat memindai barcode ini atau Nomor Induk untuk login instan.
+              </p>
+            </div>
+
+            <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">Status Keanggotaan</label>
               <select
                 value={editingAthlete.status || 'AKTIF'}
@@ -764,6 +870,65 @@ export const AthletesManagementPage: React.FC = () => {
         onClose={() => setIsDepositOpen(false)}
         preselectedAthleteId={selectedAthleteForDeposit}
         onSuccess={fetchAthletes}
+      />
+
+      {/* Athlete Barcode & Member Card Modal */}
+      {selectedAthleteForCard && (
+        <Modal
+          isOpen={!!selectedAthleteForCard}
+          onClose={() => setSelectedAthleteForCard(null)}
+          title={`Kartu Anggota & Barcode - ${selectedAthleteForCard.namaLengkap}`}
+          subtitle={`Nomor Induk: ${selectedAthleteForCard.nomorInduk || '-'}`}
+          maxWidth="md"
+        >
+          <div className="py-2">
+            <BarcodeCard
+              code={selectedAthleteForCard.barcode || selectedAthleteForCard.nomorInduk || selectedAthleteForCard.id}
+              namaLengkap={selectedAthleteForCard.namaLengkap}
+              nomorInduk={selectedAthleteForCard.nomorInduk}
+              unitRanting={selectedAthleteForCard.unitRanting}
+              role="ATLIT"
+              onSaveBarcode={async (newBarcode) => {
+                const res = await api.updateAthlete(selectedAthleteForCard.id, {
+                  ...selectedAthleteForCard,
+                  barcode: newBarcode,
+                });
+                if (res.success) {
+                  setToast({ type: 'success', message: 'Barcode anggota berhasil diperbarui!' });
+                  setSelectedAthleteForCard({ ...selectedAthleteForCard, barcode: newBarcode });
+                  await fetchAthletes();
+                } else {
+                  setToast({ type: 'error', message: res.message });
+                }
+              }}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {/* Physical Card Scanner Modal */}
+      <ScanCardInputModal
+        isOpen={!!scanModalTarget}
+        onClose={() => setScanModalTarget(null)}
+        onSelectCode={(scannedCode) => {
+          if (scanModalTarget === 'add') {
+            setAddForm((prev) => ({ ...prev, barcode: scannedCode }));
+            setToast({
+              type: 'success',
+              message: `Kode kartu fisik berhasil dipindai: ${scannedCode}`,
+            });
+          } else if (scanModalTarget === 'edit' && editingAthlete) {
+            setEditingAthlete((prev) => (prev ? { ...prev, barcode: scannedCode } : null));
+            setToast({
+              type: 'success',
+              message: `Kode kartu fisik berhasil dipindai: ${scannedCode}`,
+            });
+          }
+          setScanModalTarget(null);
+        }}
+        title="Pindai Kartu Sekolah / Fisik Atlet"
+        subtitle="Arahkan kamera ke QR Code / Barcode pada kartu pelajar, KTP, atau kartu anggota sekolah fisik"
+        targetLabel="Kode Barcode Login"
       />
     </div>
   );

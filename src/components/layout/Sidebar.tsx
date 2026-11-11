@@ -16,6 +16,7 @@ import {
   PlusCircle,
   MinusCircle,
   HelpCircle,
+  QrCode,
 } from 'lucide-react';
 import { IksPiLogo } from '../common/IksPiLogo';
 
@@ -29,6 +30,7 @@ export const Sidebar: React.FC = () => {
     { name: 'Persetujuan Penarikan', path: '/admin/withdrawal-approvals', icon: ArrowUpRight },
     { name: 'Verifikasi Registrasi', path: '/admin/registration-approvals', icon: UserCheck },
     { name: 'Data Atlit', path: '/admin/athletes', icon: Users },
+    { name: 'Studio Custom QR', path: '/admin/custom-qr', icon: QrCode },
     { name: 'Semua Transaksi', path: '/admin/transactions', icon: ReceiptText },
     { name: 'Laporan Keuangan', path: '/admin/reports', icon: FileSpreadsheet },
     { name: 'Log Aktivitas', path: '/admin/activity-logs', icon: History },

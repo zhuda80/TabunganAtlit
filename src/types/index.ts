@@ -28,6 +28,7 @@ export interface UserSession {
   telepon?: string;
   email?: string;
   alamat?: string;
+  barcode?: string;
   expiresAt: number;
 }
 
@@ -42,6 +43,7 @@ export interface AdminProfile {
   unitRanting: string;
   catatan?: string;
   fotoUrl?: string;
+  barcode?: string;
   status: UserStatus;
   createdAt: string;
   lastLogin?: string;
@@ -61,6 +63,7 @@ export interface AthleteProfile {
   nomorWhatsApp: string;
   unitRanting: string;
   fotoUrl?: string;
+  barcode?: string;
   status: UserStatus;
   createdAt: string;
   updatedAt: string;
@@ -85,6 +88,7 @@ export interface PendingRegistration {
   nomorWhatsApp: string;
   unitRanting: string;
   fotoUrl?: string;
+  barcode?: string;
   tanggalDaftar: string;
   status: TransactionStatus;
   catatanAdmin?: string;
@@ -103,6 +107,7 @@ export interface AthleteCredentialItem {
   niw?: string;
   unitRanting: string;
   nomorWhatsApp: string;
+  barcode?: string;
   status: UserStatus;
   lastLogin?: string;
 }

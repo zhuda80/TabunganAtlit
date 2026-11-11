@@ -413,6 +413,10 @@ export const api = {
     // Check if remote GAS URL is configured
     const remote = await this.callRemoteGas('login', { username: rawId, identifier: rawId, password });
     if (remote && remote.success && remote.session) {
+      if (remote.session.role === 'ATLIT') {
+        const oneHourMax = Date.now() + 1 * 3600 * 1000;
+        remote.session.expiresAt = oneHourMax;
+      }
       return remote;
     }
 
@@ -462,7 +466,9 @@ export const api = {
 
     const athlete = athletes.find(a => a.userId === matchedUser.userId);
     const token = 'TOK-' + Math.random().toString(36).substring(2) + '-' + Date.now();
-    const expiresAt = Date.now() + 24 * 3600 * 1000;
+    // Akun anggota (ATLIT) otomatis logout setelah 1 jam
+    const sessionDuration = matchedUser.role === 'ATLIT' ? 1 * 3600 * 1000 : 24 * 3600 * 1000;
+    const expiresAt = Date.now() + sessionDuration;
 
     const session: UserSession = {
       token,
@@ -487,6 +493,108 @@ export const api = {
 
     recordActivity(matchedUser.username, matchedUser.role, 'LOGIN', 'AUTH', `Login berhasil (kredensial: ${rawId})`);
     return { success: true, message: 'Login berhasil!', session };
+  },
+
+  // 1B. AUTH - LOGIN WITH BARCODE / QR CODE
+  async loginWithBarcode(barcode: string): Promise<{ success: boolean; message: string; session?: UserSession }> {
+    const rawBarcode = (barcode || '').trim();
+    if (!rawBarcode) {
+      return { success: false, message: 'Kode barcode tidak boleh kosong.' };
+    }
+
+    // Try remote Google Apps Script first
+    const remote = await this.callRemoteGas('loginWithBarcode', { barcode: rawBarcode });
+    if (remote && remote.success && remote.session) {
+      if (remote.session.role === 'ATLIT') {
+        const oneHourMax = Date.now() + 1 * 3600 * 1000;
+        remote.session.expiresAt = oneHourMax;
+      }
+      return remote;
+    }
+
+    const athletes = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
+    const users = getStore<any[]>('users', SEED_USERS);
+    const deletedIds: string[] = JSON.parse(localStorage.getItem('deleted_athlete_ids') || '[]');
+
+    const cleanCompare = (val?: string) => (val || '').toString().trim().toLowerCase().replace(/[\s\-\_\/\.\:]/g, '');
+    const targetClean = cleanCompare(rawBarcode);
+
+    // Match athlete by barcode, nomor induk, id, userId, nik
+    const matchedAthlete = athletes.find((a) => {
+      if (deletedIds.includes(a.id) || deletedIds.includes(a.nomorInduk) || (a.barcode && deletedIds.includes(a.barcode))) {
+        return false;
+      }
+      if (a.barcode && cleanCompare(a.barcode) === targetClean) return true;
+      if (a.nomorInduk && cleanCompare(a.nomorInduk) === targetClean) return true;
+      if (a.id && cleanCompare(a.id) === targetClean) return true;
+      if (a.userId && cleanCompare(a.userId) === targetClean) return true;
+      if (a.nik && cleanCompare(a.nik) === targetClean) return true;
+      return false;
+    });
+
+    let matchedUser: any = null;
+    if (matchedAthlete) {
+      matchedUser = users.find((u) => u.userId === matchedAthlete.userId);
+    }
+
+    // Also match direct user barcode (e.g. admin barcode or username)
+    if (!matchedUser) {
+      matchedUser = users.find((u) => {
+        if (u.barcode && cleanCompare(u.barcode) === targetClean) return true;
+        if (u.username && cleanCompare(u.username) === targetClean) return true;
+        if (u.userId && cleanCompare(u.userId) === targetClean) return true;
+        return false;
+      });
+    }
+
+    if (!matchedUser) {
+      return {
+        success: false,
+        message: `Barcode "${rawBarcode}" tidak terdaftar dalam sistem. Pastikan barcode sudah didaftarkan pada pengaturan profil atlet.`,
+      };
+    }
+
+    if (matchedUser.status !== 'AKTIF') {
+      return {
+        success: false,
+        message: `Akun terkait barcode ini berstatus ${matchedUser.status}. Silakan hubungi pengurus cabang.`,
+      };
+    }
+
+    const athlete = matchedAthlete || athletes.find((a) => a.userId === matchedUser.userId);
+    const token = 'TOK-BC-' + Math.random().toString(36).substring(2) + '-' + Date.now();
+    // Akun anggota (ATLIT) otomatis logout setelah 1 jam
+    const sessionDuration = matchedUser.role === 'ATLIT' ? 1 * 3600 * 1000 : 24 * 3600 * 1000;
+    const expiresAt = Date.now() + sessionDuration;
+
+    const session: UserSession = {
+      token,
+      userId: matchedUser.userId,
+      username: matchedUser.username,
+      namaLengkap: matchedUser.namaLengkap || (athlete ? athlete.namaLengkap : (matchedUser.role === 'ADMIN' ? 'Administrator IKS PI' : matchedUser.username)),
+      role: matchedUser.role,
+      status: matchedUser.status,
+      jabatan: matchedUser.jabatan || (matchedUser.role === 'ADMIN' ? 'Bendahara Cabang' : undefined),
+      athleteId: athlete ? athlete.id : undefined,
+      nomorInduk: athlete ? athlete.nomorInduk : undefined,
+      angkatan: athlete ? athlete.angkatan : undefined,
+      niw: athlete ? athlete.niw : undefined,
+      nik: athlete ? athlete.nik : undefined,
+      barcode: (athlete && athlete.barcode) || matchedUser.barcode || rawBarcode,
+      unitRanting: athlete ? athlete.unitRanting : (matchedUser.unitRanting || 'Pengurus Cabang Kota Kediri'),
+      fotoUrl: matchedUser.fotoUrl || (athlete ? athlete.fotoUrl : undefined),
+      telepon: matchedUser.telepon || (athlete ? athlete.nomorWhatsApp : undefined),
+      email: matchedUser.email || (matchedUser.role === 'ADMIN' ? 'admin@ikspikediri.org' : undefined),
+      alamat: matchedUser.alamat || (matchedUser.role === 'ADMIN' ? 'Padepokan IKS PI Kera Sakti Cabang Kota Kediri' : undefined),
+      expiresAt,
+    };
+
+    recordActivity(matchedUser.username, matchedUser.role, 'LOGIN_BARCODE', 'AUTH', `Login berhasil via scan barcode (${rawBarcode})`);
+    return {
+      success: true,
+      message: `Login Berhasil! Selamat datang, ${session.namaLengkap}`,
+      session,
+    };
   },
 
   // 2. AUTH - REGISTER ATHLETE

@@ -84,6 +84,10 @@ function handleRequest(e) {
       output = handleLogin(params);
       return jsonResponse(output);
     }
+    if (action === "loginWithBarcode" || action === "loginwithbarcode") {
+      output = handleLoginWithBarcode(params);
+      return jsonResponse(output);
+    }
     if (action === "registerAthlete") {
       output = handleRegisterAthlete(params);
       return jsonResponse(output);
@@ -500,9 +504,10 @@ function handleLogin(params) {
     return { success: false, message: "Password tidak sesuai. Periksa kembali huruf besar/kecil." };
   }
 
-  // Generate Token
+  // Generate Token (1 jam untuk anggota/atlit, 24 jam untuk admin)
   var token = Utilities.getUuid() + "-" + new Date().getTime();
-  var expiresAt = new Date(new Date().getTime() + TOKEN_EXPIRY_HOURS * 3600 * 1000).toISOString();
+  var sessionHours = (role === "ATLIT") ? 1 : TOKEN_EXPIRY_HOURS;
+  var expiresAt = new Date(new Date().getTime() + sessionHours * 3600 * 1000).toISOString();
 
   // Update token in Users sheet
   sheetUsers.getRange(matchedUserIndex, 8).setValue(new Date().toISOString()); // LAST_LOGIN
@@ -519,6 +524,150 @@ function handleLogin(params) {
   return {
     success: true,
     message: "Login berhasil!",
+    session: {
+      token: token,
+      userId: userId,
+      username: dbUsername,
+      namaLengkap: matchedAthleteData ? matchedAthleteData.namaLengkap : (role === "ADMIN" ? "Administrator IKS PI" : dbUsername),
+      role: role,
+      status: status,
+      athleteId: matchedAthleteData ? matchedAthleteData.id : null,
+      nomorInduk: matchedAthleteData ? matchedAthleteData.nomorInduk : null,
+      unitRanting: matchedAthleteData ? matchedAthleteData.unitRanting : null,
+      fotoUrl: matchedAthleteData ? matchedAthleteData.fotoUrl : null,
+      telepon: matchedAthleteData ? matchedAthleteData.nomorWhatsApp : null,
+      expiresAt: new Date(expiresAt).getTime()
+    }
+  };
+}
+
+function handleLoginWithBarcode(params) {
+  var code = (params.barcode || params.code || params.identifier || "").toString().trim();
+  if (!code) {
+    return { success: false, message: "Kode barcode / QR wajib disertakan." };
+  }
+
+  var lowerCode = code.toLowerCase();
+  var cleanCode = code.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheetUsers = ss.getSheetByName(SHEETS.USERS);
+  if (!sheetUsers) return { success: false, message: "Sheet USERS belum diinisialisasi." };
+  var usersData = sheetUsers.getDataRange().getValues();
+
+  var sheetAtlit = ss.getSheetByName(SHEETS.DATA_ATLIT);
+  var atlitData = sheetAtlit ? sheetAtlit.getDataRange().getValues() : [];
+
+  var matchedUserRow = null;
+  var matchedUserIndex = -1;
+  var matchedAthleteData = null;
+
+  // 1. Check if admin matches
+  for (var i = 1; i < usersData.length; i++) {
+    var uId = (usersData[i][0] || "").toString().trim().toLowerCase();
+    var uName = (usersData[i][1] || "").toString().trim().toLowerCase();
+    var uRole = (usersData[i][4] || "").toString().trim();
+    if (uRole === "ADMIN" && (uId === lowerCode || uName === lowerCode || lowerCode === "admin" || lowerCode.indexOf("adm") !== -1)) {
+      matchedUserRow = usersData[i];
+      matchedUserIndex = i + 1;
+      break;
+    }
+  }
+
+  // 2. Check DATA_ATLIT
+  if (!matchedUserRow && atlitData.length > 1) {
+    for (var a = 1; a < atlitData.length; a++) {
+      var rowA = atlitData[a];
+      var aId = (rowA[0] || "").toString().trim();
+      var aUserId = (rowA[1] || "").toString().trim();
+      var noInduk = (rowA[2] || "").toString().trim();
+      var noIndukLower = noInduk.toLowerCase();
+      var noIndukClean = noInduk.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+      var isMatch = false;
+      if (aId.toLowerCase() === lowerCode) isMatch = true;
+      if (aUserId.toLowerCase() === lowerCode) isMatch = true;
+      if (noIndukLower === lowerCode) isMatch = true;
+      if (cleanCode && noIndukClean === cleanCode) isMatch = true;
+
+      // Check all columns in athlete row for barcode match
+      for (var col = 0; col < rowA.length; col++) {
+        var cellVal = (rowA[col] || "").toString().trim().toLowerCase();
+        if (cellVal && (cellVal === lowerCode || (cleanCode && cellVal.replace(/[^a-zA-Z0-9]/g, "") === cleanCode))) {
+          isMatch = true;
+          break;
+        }
+      }
+
+      if (isMatch && aUserId) {
+        for (var u = 1; u < usersData.length; u++) {
+          if ((usersData[u][0] || "").toString().trim() === aUserId) {
+            matchedUserRow = usersData[u];
+            matchedUserIndex = u + 1;
+            matchedAthleteData = {
+              id: rowA[0],
+              userId: rowA[1],
+              nomorInduk: rowA[2],
+              namaLengkap: rowA[3],
+              tempatLahir: rowA[4],
+              tanggalLahir: rowA[5],
+              alamat: rowA[6],
+              nomorWhatsApp: rowA[7],
+              unitRanting: rowA[8],
+              fotoUrl: rowA[9],
+              status: rowA[10]
+            };
+            break;
+          }
+        }
+        if (matchedUserRow) break;
+      }
+    }
+  }
+
+  // 3. Check USERS sheet by username
+  if (!matchedUserRow) {
+    for (var j = 1; j < usersData.length; j++) {
+      var uName2 = (usersData[j][1] || "").toString().trim().toLowerCase();
+      var uId2 = (usersData[j][0] || "").toString().trim().toLowerCase();
+      if (uName2 === lowerCode || uId2 === lowerCode) {
+        matchedUserRow = usersData[j];
+        matchedUserIndex = j + 1;
+        break;
+      }
+    }
+  }
+
+  if (!matchedUserRow) {
+    return { success: false, message: "Barcode / QR Code (" + code + ") tidak ditemukan pada data anggota atau admin." };
+  }
+
+  var userId = matchedUserRow[0];
+  var dbUsername = matchedUserRow[1];
+  var role = matchedUserRow[4];
+  var status = matchedUserRow[5];
+
+  if (status !== "AKTIF") {
+    return { success: false, message: "Akun berstatus " + status + ". Harap hubungi Admin IKS PI." };
+  }
+
+  var token = Utilities.getUuid() + "-" + new Date().getTime();
+  var sessionHours = (role === "ATLIT") ? 1 : TOKEN_EXPIRY_HOURS;
+  var expiresAt = new Date(new Date().getTime() + sessionHours * 3600 * 1000).toISOString();
+
+  sheetUsers.getRange(matchedUserIndex, 8).setValue(new Date().toISOString());
+  sheetUsers.getRange(matchedUserIndex, 9).setValue(token);
+  sheetUsers.getRange(matchedUserIndex, 10).setValue(expiresAt);
+
+  if (!matchedAthleteData && role === "ATLIT") {
+    matchedAthleteData = findAthleteByUserId(ss, userId);
+  }
+
+  logActivity(ss, dbUsername, role, "LOGIN_BARCODE", "AUTH", "Pengguna berhasil masuk ke sistem menggunakan Barcode/QR: " + code);
+
+  return {
+    success: true,
+    message: "Login Barcode berhasil! Selamat datang, " + (matchedAthleteData ? matchedAthleteData.namaLengkap : dbUsername),
     session: {
       token: token,
       userId: userId,

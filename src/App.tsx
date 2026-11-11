@@ -23,6 +23,7 @@ import { FinancialReportsPage } from './pages/admin/FinancialReportsPage';
 import { ActivityLogsPage } from './pages/admin/ActivityLogsPage';
 import { SystemSettingsPage } from './pages/admin/SystemSettingsPage';
 import { AdminProfilePage } from './pages/admin/AdminProfilePage';
+import { CustomQrStudioPage } from './pages/admin/CustomQrStudioPage';
 
 import { AthleteDashboard } from './pages/athlete/AthleteDashboard';
 import { DepositRequestPage } from './pages/athlete/DepositRequestPage';
@@ -189,6 +190,14 @@ export default function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN']}>
                   <AdminProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/custom-qr"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN']}>
+                  <CustomQrStudioPage />
                 </ProtectedRoute>
               }
             />
