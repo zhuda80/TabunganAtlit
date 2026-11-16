@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { PendingRegistration } from '../../types';
-import { formatTanggal, formatStatusBadge } from '../../utils/formatters';
+import { formatTanggal, formatStatusBadge, safeStr, normalizePhone, toWaMeDigits } from '../../utils/formatters';
 import { Modal } from '../../components/ui/Modal';
 import {
   UserCheck,
@@ -169,19 +169,19 @@ export const RegistrationApprovalsPage: React.FC = () => {
                   {item.fotoUrl ? (
                     <img
                       src={item.fotoUrl}
-                      alt={item.namaLengkap}
+                      alt={safeStr(item.namaLengkap)}
                       onClick={() => setSelectedPhoto(item.fotoUrl!)}
                       className="w-16 h-16 rounded-2xl object-cover border border-amber-400/40 cursor-pointer hover:opacity-80 transition"
                     />
                   ) : (
                     <div className="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center text-amber-400 font-bold text-lg">
-                      {item.namaLengkap.charAt(0)}
+                      {safeStr(item.namaLengkap, 'A').charAt(0).toUpperCase()}
                     </div>
                   )}
 
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-extrabold text-white">{item.namaLengkap}</h3>
+                      <h3 className="text-base font-extrabold text-white">{safeStr(item.namaLengkap, '-')}</h3>
                       <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${badge.bg}`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
                         {badge.label}
@@ -189,35 +189,46 @@ export const RegistrationApprovalsPage: React.FC = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
-                      <span>NIK: <strong className="text-slate-200 font-mono">{item.nik || '-'}</strong></span>
-                      <span className="font-mono text-amber-400 font-semibold">NI: {item.nomorInduk}</span>
+                      <span>NIK: <strong className="text-slate-200 font-mono">{safeStr(item.nik) || '-'}</strong></span>
+                      <span className="font-mono text-amber-400 font-semibold">NI: {safeStr(item.nomorInduk, '-')}</span>
                       {(item.angkatan || item.niw) && (
                         <span className="text-amber-300 font-mono text-[11px]">
-                          ({item.angkatan ? `Angkatan ${item.angkatan}` : '-'} • {item.niw ? `NIW ${item.niw}` : '-'})
+                          ({item.angkatan ? `Angkatan ${safeStr(item.angkatan)}` : '-'} • {item.niw ? `NIW ${safeStr(item.niw)}` : '-'})
                         </span>
                       )}
-                      <span>Unit/Ranting: <strong className="text-white">{item.unitRanting}</strong></span>
-                      <span>Username: <code className="text-slate-300">@{item.username}</code></span>
+                      <span>Unit/Ranting: <strong className="text-white">{safeStr(item.unitRanting, '-')}</strong></span>
+                      <span>Username: <code className="text-slate-300">@{safeStr(item.username, '-')}</code></span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-slate-400 pt-1">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3 text-slate-500" />
-                        {item.tempatLahir}, {formatTanggal(item.tanggalLahir)}
+                        {safeStr(item.tempatLahir, '-')}, {formatTanggal(item.tanggalLahir)}
                       </span>
                       <span className="flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-slate-500" />
-                        {item.alamat}
+                        {safeStr(item.alamat, '-')}
                       </span>
-                      <a
-                        href={`https://wa.me/${item.nomorWhatsApp.replace(/[^0-9]/g, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 text-emerald-400 hover:underline"
-                      >
-                        <Phone className="w-3 h-3" />
-                        {item.nomorWhatsApp}
-                      </a>
+                      {(() => {
+                        const phoneDisplay = normalizePhone(item.nomorWhatsApp);
+                        const waDigits = toWaMeDigits(phoneDisplay);
+                        return waDigits ? (
+                          <a
+                            href={`https://wa.me/${waDigits}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1 text-emerald-400 hover:underline"
+                          >
+                            <Phone className="w-3 h-3" />
+                            {phoneDisplay}
+                          </a>
+                        ) : (
+                          <span className="flex items-center gap-1 text-slate-500">
+                            <Phone className="w-3 h-3" />
+                            -
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <p className="text-[10px] text-slate-500 pt-1">

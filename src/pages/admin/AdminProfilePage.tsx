@@ -92,14 +92,14 @@ export const AdminProfilePage: React.FC = () => {
 
   const populateForm = (data: AdminProfile) => {
     setProfile(data);
-    setNamaLengkap(data.namaLengkap || '');
-    setNomorWhatsApp(data.nomorWhatsApp || '');
-    setEmail(data.email || '');
-    setAlamat(data.alamat || '');
-    setUnitRanting(data.unitRanting || '');
-    setCatatan(data.catatan || '');
-    setFotoUrl(data.fotoUrl || '');
-    setBarcode(data.barcode || data.username || 'admin');
+    setNamaLengkap(String(data.namaLengkap ?? ''));
+    setNomorWhatsApp(String(data.nomorWhatsApp ?? ''));
+    setEmail(String(data.email ?? ''));
+    setAlamat(String(data.alamat ?? ''));
+    setUnitRanting(String(data.unitRanting ?? ''));
+    setCatatan(String(data.catatan ?? ''));
+    setFotoUrl(data.fotoUrl ? String(data.fotoUrl) : '');
+    setBarcode(String(data.barcode || data.username || 'admin'));
 
     const currentJabatan = data.jabatan || '';
     if (JABATAN_PRESETS.includes(currentJabatan) && currentJabatan !== 'Lainnya (Isi Manual)') {
@@ -629,7 +629,7 @@ export const AdminProfilePage: React.FC = () => {
                   <p className="text-[11px] text-slate-400 mt-1">
                     Tautan WhatsApp publik:{' '}
                     <a
-                      href={`https://wa.me/62${nomorWhatsApp.replace(/^0+/, '')}`}
+                      href={`https://wa.me/62${String(nomorWhatsApp || '').replace(/^0+/, '')}`}
                       target="_blank"
                       rel="noreferrer"
                       className="text-amber-400 hover:underline"

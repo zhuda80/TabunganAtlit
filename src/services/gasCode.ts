@@ -464,17 +464,17 @@ function handleLogin(params) {
             matchedUserRow = usersData[u];
             matchedUserIndex = u + 1;
             matchedAthleteData = {
-              id: rowA[0],
-              userId: rowA[1],
-              nomorInduk: rowA[2],
-              namaLengkap: rowA[3],
-              tempatLahir: rowA[4],
-              tanggalLahir: rowA[5],
-              alamat: rowA[6],
-              nomorWhatsApp: rowA[7],
-              unitRanting: rowA[8],
-              fotoUrl: rowA[9],
-              status: rowA[10]
+              id: String(rowA[0] || ""),
+              userId: String(rowA[1] || ""),
+              nomorInduk: String(rowA[2] || ""),
+              namaLengkap: String(rowA[3] || ""),
+              tempatLahir: String(rowA[4] || ""),
+              tanggalLahir: String(rowA[5] || ""),
+              alamat: String(rowA[6] || ""),
+              nomorWhatsApp: String(rowA[7] || ""),
+              unitRanting: String(rowA[8] || ""),
+              fotoUrl: String(rowA[9] || ""),
+              status: String(rowA[10] || "")
             };
             break;
           }
@@ -605,17 +605,17 @@ function handleLoginWithBarcode(params) {
             matchedUserRow = usersData[u];
             matchedUserIndex = u + 1;
             matchedAthleteData = {
-              id: rowA[0],
-              userId: rowA[1],
-              nomorInduk: rowA[2],
-              namaLengkap: rowA[3],
-              tempatLahir: rowA[4],
-              tanggalLahir: rowA[5],
-              alamat: rowA[6],
-              nomorWhatsApp: rowA[7],
-              unitRanting: rowA[8],
-              fotoUrl: rowA[9],
-              status: rowA[10]
+              id: String(rowA[0] || ""),
+              userId: String(rowA[1] || ""),
+              nomorInduk: String(rowA[2] || ""),
+              namaLengkap: String(rowA[3] || ""),
+              tempatLahir: String(rowA[4] || ""),
+              tanggalLahir: String(rowA[5] || ""),
+              alamat: String(rowA[6] || ""),
+              nomorWhatsApp: String(rowA[7] || ""),
+              unitRanting: String(rowA[8] || ""),
+              fotoUrl: String(rowA[9] || ""),
+              status: String(rowA[10] || "")
             };
             break;
           }
@@ -1550,17 +1550,17 @@ function findAthleteByUserId(ss, userId) {
   for (var i = 1; i < data.length; i++) {
     if (data[i][1] === userId) {
       return {
-        id: data[i][0],
-        userId: data[i][1],
-        nomorInduk: data[i][2],
-        namaLengkap: data[i][3],
-        tempatLahir: data[i][4],
-        tanggalLahir: data[i][5],
-        alamat: data[i][6],
-        nomorWhatsApp: data[i][7],
-        unitRanting: data[i][8],
-        fotoUrl: data[i][9],
-        status: data[i][10]
+        id: String(data[i][0] || ""),
+        userId: String(data[i][1] || ""),
+        nomorInduk: String(data[i][2] || ""),
+        namaLengkap: String(data[i][3] || ""),
+        tempatLahir: String(data[i][4] || ""),
+        tanggalLahir: String(data[i][5] || ""),
+        alamat: String(data[i][6] || ""),
+        nomorWhatsApp: String(data[i][7] || ""),
+        unitRanting: String(data[i][8] || ""),
+        fotoUrl: String(data[i][9] || ""),
+        status: String(data[i][10] || "")
       };
     }
   }
@@ -1733,11 +1733,11 @@ function handleGetDigitalPassbook(session, params) {
   for (var a = 1; a < atlitData.length; a++) {
     if (atlitData[a][0] === athleteId) {
       atlitRow = {
-        id: atlitData[a][0],
-        nomorInduk: atlitData[a][2],
-        namaLengkap: atlitData[a][3],
-        unitRanting: atlitData[a][8],
-        nomorWhatsApp: atlitData[a][7]
+        id: String(atlitData[a][0] || ""),
+        nomorInduk: String(atlitData[a][2] || ""),
+        namaLengkap: String(atlitData[a][3] || ""),
+        unitRanting: String(atlitData[a][8] || ""),
+        nomorWhatsApp: String(atlitData[a][7] || "")
       };
       break;
     }
@@ -2039,19 +2039,19 @@ function handleGetAthletes(session, params) {
     }
 
     athletes.push({
-      id: athId,
-      userId: row[1],
+      id: String(athId || ""),
+      userId: String(row[1] || ""),
       nomorInduk: noInduk,
       angkatan: angkatan,
       niw: niw,
-      namaLengkap: row[3],
-      tempatLahir: row[4],
-      tanggalLahir: row[5],
-      alamat: row[6],
-      nomorWhatsApp: row[7],
-      unitRanting: row[8],
-      fotoUrl: row[9],
-      status: row[10] || "AKTIF",
+      namaLengkap: String(row[3] || ""),
+      tempatLahir: String(row[4] || ""),
+      tanggalLahir: String(row[5] || ""),
+      alamat: String(row[6] || ""),
+      nomorWhatsApp: String(row[7] || ""),
+      unitRanting: String(row[8] || ""),
+      fotoUrl: String(row[9] || ""),
+      status: String(row[10] || "AKTIF"),
       createdAt: row[11],
       updatedAt: row[12],
       saldoSaatIni: sal.saldoSaatIni,
@@ -2161,24 +2161,24 @@ function handleGetPendingRegistrations(session, params) {
     var tgl = row[15] ? new Date(row[15]).toISOString() : new Date().toISOString();
 
     registrations.push({
-      id: row[0],
-      username: row[1],
+      id: String(row[0] || ""),
+      username: String(row[1] || ""),
       nomorInduk: noInduk || "-",
       angkatan: angkatan,
       niw: niw,
-      namaLengkap: row[5],
-      tempatLahir: row[6],
-      tanggalLahir: row[7],
-      alamat: row[8],
-      nomorWhatsApp: row[9],
-      unitRanting: row[10],
-      fotoUrl: row[11],
-      status: row[12] || "MENUNGGU_PERSETUJUAN",
-      catatanAdmin: row[13] || "",
-      diperiksaOleh: row[14] || "",
+      namaLengkap: String(row[5] || ""),
+      tempatLahir: String(row[6] || ""),
+      tanggalLahir: String(row[7] || ""),
+      alamat: String(row[8] || ""),
+      nomorWhatsApp: String(row[9] || ""),
+      unitRanting: String(row[10] || ""),
+      fotoUrl: String(row[11] || ""),
+      status: rowStatus || "MENUNGGU_PERSETUJUAN",
+      catatanAdmin: String(row[13] || ""),
+      diperiksaOleh: String(row[14] || ""),
       tanggalDaftar: tgl,
       tanggalPengajuan: tgl,
-      tanggalPemeriksaan: row[16] || ""
+      tanggalPemeriksaan: String(row[16] || "")
     });
   }
   return { success: true, registrations: registrations };
@@ -2485,14 +2485,14 @@ function handleGetAthletesCredentials(session, params) {
   var list = [];
   for (var i = 1; i < atlitData.length; i++) {
     var row = atlitData[i];
-    var athId = row[0];
+    var athId = String(row[0] || "");
     if (!athId) continue;
-    var userId = row[1];
-    var noInduk = row[2] || "-";
-    var nama = row[3] || "";
-    var hp = row[7] || "";
-    var unit = row[8] || "";
-    var status = row[10] || "AKTIF";
+    var userId = String(row[1] || "");
+    var noInduk = String(row[2] || "-");
+    var nama = String(row[3] || "");
+    var hp = String(row[7] || "");
+    var unit = String(row[8] || "");
+    var status = String(row[10] || "AKTIF");
     var angkatan = "";
     var niw = "";
     if (noInduk.indexOf("/") !== -1) {

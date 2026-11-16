@@ -82,16 +82,16 @@ export const AthleteProfilePage: React.FC = () => {
 
   const populateFormWithData = (data: AthleteProfile) => {
     setProfile(data);
-    setFotoUrl(data.fotoUrl || '');
-    setNamaLengkap(data.namaLengkap || '');
-    setNik(data.nik || '');
-    setAngkatan(data.angkatan || '');
-    setNiw(data.niw || '');
-    setNomorWhatsApp(data.nomorWhatsApp || '');
-    setTempatLahir(data.tempatLahir || '');
-    setTanggalLahir(data.tanggalLahir ? data.tanggalLahir.substring(0, 10) : '');
-    setAlamat(data.alamat || '');
-    setBarcode(data.barcode || data.nomorInduk || '');
+    setFotoUrl(data.fotoUrl ? String(data.fotoUrl) : '');
+    setNamaLengkap(String(data.namaLengkap ?? ''));
+    setNik(String(data.nik ?? ''));
+    setAngkatan(String(data.angkatan ?? ''));
+    setNiw(String(data.niw ?? ''));
+    setNomorWhatsApp(String(data.nomorWhatsApp ?? ''));
+    setTempatLahir(String(data.tempatLahir ?? ''));
+    setTanggalLahir(data.tanggalLahir ? String(data.tanggalLahir).substring(0, 10) : '');
+    setAlamat(String(data.alamat ?? ''));
+    setBarcode(String(data.barcode || data.nomorInduk || ''));
 
     // Handle unit / ranting dropdown & custom value
     const currentUnit = data.unitRanting || '';

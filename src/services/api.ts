@@ -16,7 +16,49 @@ import {
   AppNotice,
   AdminProfile,
 } from '../types';
-import { generateUniqueCode } from '../utils/formatters';
+import { generateUniqueCode, safeStr, normalizePhone } from '../utils/formatters';
+
+const normalizeAthleteRecord = (a: any): AthleteProfile => ({
+  ...a,
+  id: safeStr(a?.id),
+  userId: safeStr(a?.userId),
+  nomorInduk: safeStr(a?.nomorInduk, '-'),
+  nik: a?.nik !== undefined && a?.nik !== null && safeStr(a.nik) !== '' ? safeStr(a.nik) : undefined,
+  angkatan: a?.angkatan !== undefined && a?.angkatan !== null && safeStr(a.angkatan) !== '' ? safeStr(a.angkatan) : undefined,
+  niw: a?.niw !== undefined && a?.niw !== null && safeStr(a.niw) !== '' ? safeStr(a.niw) : undefined,
+  barcode: a?.barcode !== undefined && a?.barcode !== null && safeStr(a.barcode) !== '' ? safeStr(a.barcode) : undefined,
+  namaLengkap: safeStr(a?.namaLengkap),
+  tempatLahir: safeStr(a?.tempatLahir),
+  tanggalLahir: safeStr(a?.tanggalLahir),
+  alamat: safeStr(a?.alamat),
+  nomorWhatsApp: normalizePhone(a?.nomorWhatsApp),
+  unitRanting: safeStr(a?.unitRanting),
+  fotoUrl: a?.fotoUrl ? safeStr(a.fotoUrl) : undefined,
+  status: a?.status === 'NONAKTIF' ? 'NONAKTIF' : 'AKTIF',
+  createdAt: safeStr(a?.createdAt),
+  updatedAt: safeStr(a?.updatedAt),
+  saldoSaatIni: Number(a?.saldoSaatIni) || 0,
+  totalSetoran: Number(a?.totalSetoran) || 0,
+  totalPenarikan: Number(a?.totalPenarikan) || 0,
+});
+
+const normalizeSessionRecord = (s: any): UserSession => ({
+  ...s,
+  token: safeStr(s?.token),
+  userId: safeStr(s?.userId),
+  username: safeStr(s?.username),
+  namaLengkap: safeStr(s?.namaLengkap),
+  athleteId: s?.athleteId ? safeStr(s.athleteId) : undefined,
+  nomorInduk: s?.nomorInduk ? safeStr(s.nomorInduk) : undefined,
+  angkatan: s?.angkatan ? safeStr(s.angkatan) : undefined,
+  niw: s?.niw ? safeStr(s.niw) : undefined,
+  nik: s?.nik ? safeStr(s.nik) : undefined,
+  barcode: s?.barcode ? safeStr(s.barcode) : undefined,
+  unitRanting: s?.unitRanting ? safeStr(s.unitRanting) : undefined,
+  telepon: s?.telepon ? normalizePhone(s.telepon) : undefined,
+  email: s?.email ? safeStr(s.email) : undefined,
+  alamat: s?.alamat ? safeStr(s.alamat) : undefined,
+});
 
 const STORAGE_KEY_PREFIX = 'ikspi_tabungan_live_';
 
@@ -413,6 +455,7 @@ export const api = {
     // Check if remote GAS URL is configured
     const remote = await this.callRemoteGas('login', { username: rawId, identifier: rawId, password });
     if (remote && remote.success && remote.session) {
+      remote.session = normalizeSessionRecord(remote.session);
       if (remote.session.role === 'ATLIT') {
         const oneHourMax = Date.now() + 1 * 3600 * 1000;
         remote.session.expiresAt = oneHourMax;
@@ -505,6 +548,7 @@ export const api = {
     // Try remote Google Apps Script first
     const remote = await this.callRemoteGas('loginWithBarcode', { barcode: rawBarcode });
     if (remote && remote.success && remote.session) {
+      remote.session = normalizeSessionRecord(remote.session);
       if (remote.session.role === 'ATLIT') {
         const oneHourMax = Date.now() + 1 * 3600 * 1000;
         remote.session.expiresAt = oneHourMax;
@@ -693,6 +737,9 @@ export const api = {
       if (!Array.isArray(remote.stats.chartDataBulanan) || isRemoteEmpty) {
         remote.stats.chartDataBulanan = [];
       }
+      if (remote.athlete) {
+        remote.athlete = normalizeAthleteRecord(remote.athlete);
+      }
       return remote;
     }
 
@@ -813,7 +860,8 @@ export const api = {
     const deletedIds = getStore<string[]>('deleted_athlete_ids', []);
     const remote = await this.callRemoteGas('getAthletes');
     if (remote && remote.athletes && Array.isArray(remote.athletes)) {
-      const activeAthletes = remote.athletes.filter(
+      const normalizedRemote = remote.athletes.map(normalizeAthleteRecord);
+      const activeAthletes = normalizedRemote.filter(
         (a: AthleteProfile) =>
           !deletedIds.includes(a.id) &&
           !deletedIds.includes(a.userId) &&
@@ -823,7 +871,7 @@ export const api = {
       setStore('athletes', activeAthletes);
       return activeAthletes;
     }
-    const local = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES);
+    const local = getStore<AthleteProfile[]>('athletes', SEED_ATHLETES).map(normalizeAthleteRecord);
     return local.filter(
       (a: AthleteProfile) =>
         !deletedIds.includes(a.id) &&
@@ -992,7 +1040,21 @@ export const api = {
 
   // 5. REGISTRATION APPROVALS
   async getPendingRegistrations(): Promise<PendingRegistration[]> {
-    const localPendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS);
+    const localPendings = getStore<PendingRegistration[]>('pendings', SEED_PENDING_REGISTRATIONS).map((p): PendingRegistration => ({
+      ...p,
+      id: safeStr(p.id),
+      username: safeStr(p.username),
+      namaLengkap: safeStr(p.namaLengkap),
+      nomorInduk: safeStr(p.nomorInduk, '-'),
+      nik: p.nik !== undefined && p.nik !== null && safeStr(p.nik) !== '' ? safeStr(p.nik) : undefined,
+      angkatan: p.angkatan !== undefined && p.angkatan !== null && safeStr(p.angkatan) !== '' ? safeStr(p.angkatan) : undefined,
+      niw: p.niw !== undefined && p.niw !== null && safeStr(p.niw) !== '' ? safeStr(p.niw) : undefined,
+      tempatLahir: safeStr(p.tempatLahir),
+      tanggalLahir: safeStr(p.tanggalLahir),
+      alamat: safeStr(p.alamat),
+      nomorWhatsApp: normalizePhone(p.nomorWhatsApp),
+      unitRanting: safeStr(p.unitRanting),
+    }));
     let merged = localPendings.filter(p => !p.status || p.status === 'MENUNGGU_PERSETUJUAN');
 
     try {
@@ -1000,29 +1062,31 @@ export const api = {
       if (remote && Array.isArray(remote.registrations)) {
         for (const r of remote.registrations) {
           if (r.status && r.status !== 'MENUNGGU_PERSETUJUAN') continue;
+          const rId = safeStr(r.id);
+          const rUsername = safeStr(r.username);
           const existingIdx = merged.findIndex(
-            p => p.id === r.id || (p.username.toLowerCase() === (r.username || '').toLowerCase())
+            p => p.id === rId || (p.username.toLowerCase() === rUsername.toLowerCase())
           );
           const normalized: PendingRegistration = {
-            id: r.id,
-            username: r.username,
-            password: r.password || (existingIdx >= 0 ? merged[existingIdx].password : 'atlit123'),
-            namaLengkap: r.namaLengkap,
-            nomorInduk: r.nomorInduk || '-',
-            nik: r.nik,
-            angkatan: r.angkatan,
-            niw: r.niw,
-            tempatLahir: r.tempatLahir || '',
-            tanggalLahir: r.tanggalLahir || '',
-            alamat: r.alamat || '',
-            nomorWhatsApp: r.nomorWhatsApp || '',
-            unitRanting: r.unitRanting || '',
-            fotoUrl: r.fotoUrl,
-            tanggalDaftar: r.tanggalDaftar || r.tanggalPengajuan || r.createdAt || new Date().toISOString(),
+            id: rId,
+            username: rUsername,
+            password: safeStr(r.password) || (existingIdx >= 0 ? merged[existingIdx].password : 'atlit123'),
+            namaLengkap: safeStr(r.namaLengkap),
+            nomorInduk: safeStr(r.nomorInduk) || '-',
+            nik: r.nik !== undefined && r.nik !== null && safeStr(r.nik) !== '' ? safeStr(r.nik) : undefined,
+            angkatan: r.angkatan !== undefined && r.angkatan !== null && safeStr(r.angkatan) !== '' ? safeStr(r.angkatan) : undefined,
+            niw: r.niw !== undefined && r.niw !== null && safeStr(r.niw) !== '' ? safeStr(r.niw) : undefined,
+            tempatLahir: safeStr(r.tempatLahir),
+            tanggalLahir: safeStr(r.tanggalLahir),
+            alamat: safeStr(r.alamat),
+            nomorWhatsApp: normalizePhone(r.nomorWhatsApp),
+            unitRanting: safeStr(r.unitRanting),
+            fotoUrl: r.fotoUrl ? safeStr(r.fotoUrl) : undefined,
+            tanggalDaftar: safeStr(r.tanggalDaftar || r.tanggalPengajuan || r.createdAt) || new Date().toISOString(),
             status: 'MENUNGGU_PERSETUJUAN',
-            catatanAdmin: r.catatanAdmin,
-            diperiksaOleh: r.diperiksaOleh,
-            tanggalPemeriksaan: r.tanggalPemeriksaan,
+            catatanAdmin: r.catatanAdmin ? safeStr(r.catatanAdmin) : undefined,
+            diperiksaOleh: r.diperiksaOleh ? safeStr(r.diperiksaOleh) : undefined,
+            tanggalPemeriksaan: r.tanggalPemeriksaan ? safeStr(r.tanggalPemeriksaan) : undefined,
           };
 
           if (existingIdx >= 0) {
@@ -1935,7 +1999,20 @@ export const api = {
   async getAthletesCredentials(): Promise<AthleteCredentialItem[]> {
     const remote = await this.callRemoteGas('getAthletesCredentials');
     if (remote && remote.success && Array.isArray(remote.credentials) && remote.credentials.length > 0) {
-      return remote.credentials;
+      return remote.credentials.map((c: any) => ({
+        ...c,
+        athleteId: safeStr(c.athleteId),
+        userId: safeStr(c.userId),
+        username: safeStr(c.username),
+        passwordText: safeStr(c.passwordText),
+        namaLengkap: safeStr(c.namaLengkap),
+        nomorInduk: safeStr(c.nomorInduk, '-'),
+        angkatan: c.angkatan ? safeStr(c.angkatan) : undefined,
+        niw: c.niw ? safeStr(c.niw) : undefined,
+        unitRanting: safeStr(c.unitRanting),
+        nomorWhatsApp: normalizePhone(c.nomorWhatsApp),
+        status: c.status === 'NONAKTIF' ? 'NONAKTIF' : 'AKTIF',
+      }));
     }
 
     const athletes = await this.getAthletes();
@@ -2284,7 +2361,19 @@ export const api = {
   async getAdminProfile(userIdOrUsername?: string): Promise<AdminProfile> {
     const remote = await this.callRemoteGas('getAdminProfile', { identifier: userIdOrUsername || 'admin' });
     if (remote && remote.profile) {
-      return remote.profile;
+      return {
+        ...remote.profile,
+        userId: safeStr(remote.profile.userId),
+        username: safeStr(remote.profile.username),
+        namaLengkap: safeStr(remote.profile.namaLengkap),
+        jabatan: safeStr(remote.profile.jabatan),
+        nomorWhatsApp: normalizePhone(remote.profile.nomorWhatsApp),
+        email: safeStr(remote.profile.email),
+        alamat: safeStr(remote.profile.alamat),
+        unitRanting: safeStr(remote.profile.unitRanting),
+        catatan: safeStr(remote.profile.catatan),
+        barcode: remote.profile.barcode ? safeStr(remote.profile.barcode) : undefined,
+      };
     }
 
     const users = getStore<any[]>('users', SEED_USERS);

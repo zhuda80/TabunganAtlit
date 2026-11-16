@@ -289,7 +289,7 @@ export const SystemSettingsPage: React.FC = () => {
   };
 
   const handleSendWhatsApp = (item: AthleteCredentialItem) => {
-    let phone = (item.nomorWhatsApp || '').replace(/\D/g, '');
+    let phone = String(item.nomorWhatsApp ?? '').replace(/\D/g, '');
     if (!phone) {
       setToast({ type: 'error', message: `Nomor WhatsApp ${item.namaLengkap} belum tercatat.` });
       return;
@@ -1491,11 +1491,11 @@ export const SystemSettingsPage: React.FC = () => {
               const q = credSearch.toLowerCase();
               const matchQuery =
                 !q ||
-                c.namaLengkap.toLowerCase().includes(q) ||
-                c.username.toLowerCase().includes(q) ||
-                (c.nomorInduk || '').toLowerCase().includes(q) ||
-                (c.nomorWhatsApp || '').includes(q) ||
-                c.unitRanting.toLowerCase().includes(q);
+                String(c.namaLengkap || '').toLowerCase().includes(q) ||
+                String(c.username || '').toLowerCase().includes(q) ||
+                String(c.nomorInduk || '').toLowerCase().includes(q) ||
+                String(c.nomorWhatsApp || '').includes(q) ||
+                String(c.unitRanting || '').toLowerCase().includes(q);
 
               const matchRanting = credRantingFilter === 'SEMUA' || c.unitRanting === credRantingFilter;
               return matchQuery && matchRanting;

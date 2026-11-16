@@ -81,3 +81,30 @@ export const generateUniqueCode = (prefix: string): string => {
   const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `${prefix}-${datePart}-${randomPart}`;
 };
+
+export const safeStr = (val: unknown, fallback = ''): string => {
+  if (val === undefined || val === null) return fallback;
+  return String(val);
+};
+
+export const normalizePhone = (val: unknown): string => {
+  const raw = safeStr(val).trim();
+  if (!raw) return '';
+  // Recover leading '0' if Google Sheets stored an Indonesian mobile number as a numeric cell
+  if (/^8\d{7,13}$/.test(raw)) {
+    return '0' + raw;
+  }
+  return raw;
+};
+
+export const toWaMeDigits = (val: unknown): string => {
+  let digits = safeStr(val).replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('0')) {
+    digits = '62' + digits.substring(1);
+  } else if (digits.startsWith('8')) {
+    digits = '62' + digits;
+  }
+  return digits;
+};
+

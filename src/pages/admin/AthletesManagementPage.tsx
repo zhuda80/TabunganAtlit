@@ -234,12 +234,12 @@ export const AthletesManagementPage: React.FC = () => {
   const filtered = (athletes || []).filter((a) => {
     const q = searchTerm.toLowerCase();
     const matchSearch =
-      (a.namaLengkap && a.namaLengkap.toLowerCase().includes(q)) ||
-      (a.nomorInduk && a.nomorInduk.toLowerCase().includes(q)) ||
-      (a.nik && a.nik.toLowerCase().includes(q)) ||
-      (a.angkatan && a.angkatan.toLowerCase().includes(q)) ||
-      (a.niw && a.niw.toLowerCase().includes(q)) ||
-      (a.unitRanting && a.unitRanting.toLowerCase().includes(q));
+      String(a.namaLengkap || '').toLowerCase().includes(q) ||
+      String(a.nomorInduk || '').toLowerCase().includes(q) ||
+      String(a.nik || '').toLowerCase().includes(q) ||
+      String(a.angkatan || '').toLowerCase().includes(q) ||
+      String(a.niw || '').toLowerCase().includes(q) ||
+      String(a.unitRanting || '').toLowerCase().includes(q);
     const matchRanting = selectedRanting === 'ALL' || a.unitRanting === selectedRanting;
     const matchStatus = selectedStatus === 'ALL' || a.status === selectedStatus;
     return matchSearch && matchRanting && matchStatus;
@@ -357,7 +357,7 @@ export const AthletesManagementPage: React.FC = () => {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 font-black text-base flex items-center justify-center shrink-0 shadow">
-                      {ath.namaLengkap.charAt(0)}
+                      {String(ath.namaLengkap || 'A').charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white line-clamp-1">{ath.namaLengkap}</h3>
